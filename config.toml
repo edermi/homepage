@@ -1,0 +1,37 @@
+baseURL = "https://michael-eder.net/"
+languageCode = "en-us"
+title = "edermi's Blog"
+theme = "beautifulhugo"
+pygmentsCodeFences = true
+pygmentsUseClasses = true
+publishDir = "docs"
+
+[Params]
+  mainSections = ["post","posts"]
+  dateFormat = "2006-01-02"
+  commit = false
+  rss = true
+  readingTime = true
+  wordCount = true
+  hideAuthor = true
+
+[Author]
+  name = "Michael Eder"
+  website = "michael-eder.net"
+  email = "spam-blog@michael-eder.net"
+  github = "edermi"
+  twitter = "michael_eder_"
+  linkedin = "michael-eder-34b923120"
+  xing = "Michael_Eder65"
+
+
+[[menu.main]]
+    name = "About"
+    url = "about/"
+    weight = 3
+
+[[menu.main]]
+    name = "Turingcomplete"
+    url = "turingcomplete/"
+    weight = 3
+
