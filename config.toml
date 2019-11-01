@@ -27,7 +27,7 @@ pygmentsUseClasses = true
 [[menu.main]]
     name = "About"
     url = "about/"
-    weight = 3
+    weight = 1
 
 [[menu.main]]
     name = "Turingcomplete"
