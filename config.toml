@@ -4,7 +4,6 @@ title = "edermi's Blog"
 theme = "beautifulhugo"
 pygmentsCodeFences = true
 pygmentsUseClasses = true
-publishDir = "docs"
 
 [Params]
   mainSections = ["post","posts"]
