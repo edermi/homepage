@@ -8,7 +8,7 @@ pygmentsUseClasses = true
 [Params]
   mainSections = ["post","posts"]
   dateFormat = "2006-01-02"
-  commit = false
+  commit = true
   rss = true
   readingTime = true
   wordCount = true
