@@ -13,6 +13,7 @@ pygmentsUseClasses = true
   readingTime = true
   wordCount = true
   hideAuthor = true
+  selfHosted = true
 
 [Author]
   name = "Michael Eder"
