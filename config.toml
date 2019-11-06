@@ -4,20 +4,22 @@ title = "edermi's Blog"
 theme = "beautifulhugo"
 pygmentsCodeFences = true
 pygmentsUseClasses = true
+enableGitInfo = true
+
 
 [Params]
+  commit = "https://github.com/edermi/edermi.github.io/tree/"
   mainSections = ["post","posts"]
   dateFormat = "2006-01-02"
-  commit = true
   rss = true
   readingTime = true
   wordCount = true
   hideAuthor = true
   selfHosted = true
+  copyright = "CC BY-SA 4.0"
 
 [Author]
   name = "Michael Eder"
-  website = "michael-eder.net"
   email = "spam-blog@michael-eder.net"
   github = "edermi"
   twitter = "michael_eder_"
