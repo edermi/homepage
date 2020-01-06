@@ -1,4 +1,4 @@
-baseURL = "edermi.github.io"
+baseURL = ""
 languageCode = "en-us"
 title = "edermi's Blog"
 theme = "beautifulhugo"
