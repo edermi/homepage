@@ -1,0 +1,506 @@
+<!doctype html><html lang=en itemscope itemtype=http://schema.org/WebPage><head><meta charset=utf-8><meta http-equiv=x-ua-compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><title>Modding Gophish - edermi's Blog</title><meta name=description content="TL;DR: I&rsquo;ll shine a light on Gophish and how to modify it to change behavior or introduce/remove functionality. At the end of this post, you&rsquo;ll know how to host custom 404 pages in Gophish and how to abuse HTTP basic auth instead of login forms embedded on the landing page to obtain juicy creds.
+A few days ago I tweeted one of my modifications to Gophish:
+After low click rates in my last phishing campaign due to staff being extremely well trained for this kind of attack, I modded gophish to show an HTTP Basic auth request instead of a phishing site."><meta name=author content="Michael Eder"><script type=application/ld+json>{"@context":"http://schema.org","@type":"WebSite","name":"edermi\u0027s Blog","url":"https:\/\/edermi.github.io\/"}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Organization","name":"","url":"https:\/\/edermi.github.io\/"}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https:\/\/edermi.github.io\/","name":"home"}},{"@type":"ListItem","position":3,"item":{"@id":"https:\/\/edermi.github.io\/post\/2021\/modding_gophish\/","name":"Modding gophish"}}]}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Article","author":{"name":"Michael Eder"},"headline":"Modding Gophish","description":"TL;DR: I\u0026rsquo;ll shine a light on Gophish and how to modify it to change behavior or introduce\/remove functionality. At the end of this post, you\u0026rsquo;ll know how to host custom 404 pages in Gophish and how to abuse HTTP basic auth instead of login forms embedded on the landing page to obtain juicy creds.\nA few days ago I tweeted one of my modifications to Gophish:\nAfter low click rates in my last phishing campaign due to staff being extremely well trained for this kind of attack, I modded gophish to show an HTTP Basic auth request instead of a phishing site.","inLanguage":"en","wordCount":4674,"datePublished":"2021-05-24T00:00:00","dateModified":"2021-05-24T00:00:00","image":"https:\/\/edermi.github.io\/","keywords":["Gophish"],"mainEntityOfPage":"https:\/\/edermi.github.io\/post\/2021\/modding_gophish\/","publisher":{"@type":"Organization","name":"https:\/\/edermi.github.io\/","logo":{"@type":"ImageObject","url":"https:\/\/edermi.github.io\/","height":60,"width":60}}}</script><meta property="og:title" content="Modding Gophish"><meta property="og:description" content="TL;DR: I&rsquo;ll shine a light on Gophish and how to modify it to change behavior or introduce/remove functionality. At the end of this post, you&rsquo;ll know how to host custom 404 pages in Gophish and how to abuse HTTP basic auth instead of login forms embedded on the landing page to obtain juicy creds.
+A few days ago I tweeted one of my modifications to Gophish:
+After low click rates in my last phishing campaign due to staff being extremely well trained for this kind of attack, I modded gophish to show an HTTP Basic auth request instead of a phishing site."><meta property="og:url" content="https://edermi.github.io/post/2021/modding_gophish/"><meta property="og:type" content="website"><meta property="og:site_name" content="edermi's Blog"><meta name=twitter:title content="Modding Gophish"><meta name=twitter:description content="TL;DR: I&rsquo;ll shine a light on Gophish and how to modify it to change behavior or introduce/remove functionality. At the end of this post, you&rsquo;ll know how to host custom 404 pages in Gophish …"><meta name=twitter:card content="summary"><meta name=twitter:site content="@michael_eder_"><meta name=twitter:creator content="@michael_eder_"><meta name=generator content="Hugo 0.83.1"><link rel=alternate href=https://edermi.github.io/index.xml type=application/rss+xml title="edermi's Blog"><link rel=stylesheet href=https://edermi.github.io/css/katex.min.css><link rel=stylesheet href=https://edermi.github.io/fontawesome/css/all.css><link rel=stylesheet href=https://edermi.github.io/css/bootstrap.min.css><link rel=stylesheet href=https://edermi.github.io/css/main.css><link rel=stylesheet href=https://edermi.github.io/css/fonts.css><link rel=stylesheet href=https://edermi.github.io/css/syntax.css><link rel=stylesheet href=https://edermi.github.io/css/codeblock.css><link rel=stylesheet href=https://edermi.github.io/css/photoswipe.min.css><link rel=stylesheet href=https://edermi.github.io/css/photoswipe.default-skin.min.css></head><body><nav class="navbar navbar-default navbar-fixed-top navbar-custom"><div class=container-fluid><div class=navbar-header><button type=button class=navbar-toggle data-toggle=collapse data-target=#main-navbar>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span><span class=icon-bar></span><span class=icon-bar></span></button>
+<a class=navbar-brand href=https://edermi.github.io/>edermi's Blog</a></div><div class="collapse navbar-collapse" id=main-navbar><ul class="nav navbar-nav navbar-right"><li><a title=About href=/about/>About</a></li><li><a title=Turingcomplete href=/turingcomplete/>Turingcomplete</a></li></ul></div></div></nav><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)"></button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><header class=header-section><div class="intro-header no-img"><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><h1>Modding Gophish</h1><span class=post-meta><i class="fas fa-calendar"></i>&nbsp;Posted on 2021-05-24
+&nbsp;|&nbsp;<i class="fas fa-clock"></i>&nbsp;22&nbsp;minutes
+&nbsp;|&nbsp;<i class="fas fa-book"></i>&nbsp;4674&nbsp;words</span></div></div></div></div></div></header><div class=container role=main><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><article role=main class=blog-post><p><em><strong>TL;DR</strong></em>: <em>I&rsquo;ll shine a light on Gophish and how to modify it to change behavior or introduce/remove functionality. At the end of this post, you&rsquo;ll know how to host custom 404 pages in Gophish and how to abuse HTTP basic auth instead of login forms embedded on the landing page to obtain juicy creds.</em></p><p>A few days ago I tweeted one of my modifications to Gophish:</p><blockquote class=twitter-tweet><p lang=en dir=ltr>After low click rates in my last phishing campaign due to staff being extremely well trained for this kind of attack, I modded gophish to show an HTTP Basic auth request instead of a phishing site. Once data is entered, users are redirected to a legit site: <a href=https://t.co/LncsgT8OSE>pic.twitter.com/LncsgT8OSE</a></p>&mdash; Michael Eder (@michael_eder_) <a href="https://twitter.com/michael_eder_/status/1393001118788096002?ref_src=twsrc%5Etfw">May 14, 2021</a></blockquote><script async src=https://platform.twitter.com/widgets.js></script><p>I decided that it is worth to go a little bit into detail on how to modify Gophish.</p><h1 id=intro>Intro</h1><p><a href=https://getgophish.com/>Gophish</a> is an open-source phishing framework.
+It has several nice properties, for example, Gophish is platform independent and comes in a single, ready to use binary.
+We use Gophish internally a lot because of its flexibility - we&rsquo;ve done countless deployments to perform phishing attacks against organizations of any size. The powerful API paired with the self-contained binary and ease of configuration really stand out compared to many other products in this area.</p><p>I believe that many people are reluctant to tinker with code on their own; as somebody who also sometimes requires a push or needs to see how easy things may go, I decided to write a blog post where I showcase some modifications to Gophish that may come in handy in some situations.
+If you&rsquo;re a seasoned phisherman and modifying the stuff you use is your daily business, there probably won&rsquo;t be anything of interest in this post.
+If you&rsquo;re an occasional user and dislike some behavior or are missing out features, this post may help you getting started.
+When you decide to improve Gophish and think your changes benefit the goals of the Gophish project, I highly encourage you to submit a PR or at least open an issue to discuss if integrating your changes makes sense.
+The Gophish community is really awesome, so there&rsquo;s a chance that your changes may also be introduced in the upstream project, helping others, too.</p><p>This post will not cover how Gophish works in detail, so if you&rsquo;re unfamiliar with the tool, I recommend to take a look at the <a href=https://docs.getgophish.com/user-guide/>documentation</a>.</p><h1 id=why-even-modding-gophish>Why even modding Gophish?</h1><p>The goal of Gophish is to aid training and educating users about phishing attacks.
+Due to the API and some other design decisions, Gophish is really flexible and you can easily automate many things.
+You may also use your supporting infrastructure, for example your reverse proxy, to implement behavior that is not supported by Gophish directly, e.g. URLs you can dictate over phone for vishing without raising suspicions.
+With some custom JavaScript in your landing pages, it is also quite easy to do things like &ldquo;passing the phish&rdquo; to another framework like the awesome <a href=https://github.com/kgretzky/evilginx2>evilginx2</a> for attacking users with MFA enabled.
+You may also place a <a href=https://beefproject.com/>BeEF</a> hook, allowing you to go into closer interaction with the victim&rsquo;s browser.
+Nevertheless, sometimes, especially for social engineering and red teaming assessments, these options are not sufficient and Gophish needs some adaptions to fit the requirements.</p><p>For this post, I&rsquo;ll showcase two modifications:</p><ol><li>Return a custom 404 page.
+Gophish&rsquo;s 404 page just prints 404 and there are no customization opportunities.
+I&rsquo;m pretty sure a seasoned analyst visiting the page will spot the intent of the URL instantly.
+A page that blends in better, e.g. a 404 page of a well-known web server like nginx or something that relates to the domain can avoid raising suspicions.</li><li>Phish users with HTTP auth instead of a phishing page.
+Mature organizations have trained their staff to death, so low success rates coupled with a high number of suspicious email reports hitting the SOC are something to definitely expect when sending out your average O365 login page phish.
+As an attempt to overcome this, I will modify Gophish to request an HTTP auth on the landing page instead of displaying the phishing page.
+This will bring an authentication popup, and because there is an operating system / browser window asking for credentials, I assume there&rsquo;s a higher chance for people to fall for this.</li></ol><p>The modifications I&rsquo;m going to show are quick and dirty.
+First, of course I do not want to bloat this post more than necessary.
+Second, these modifications are local and on-demand.
+It is beneficial to keep them short and easy to understand, because when you&rsquo;re stressed and in the field, a failing database migration because you messed up somewhere is a unpleasant experience.
+Keeping your modifications small and contained also allows you to easily adapt to newer versions - a large set of patches may be more difficult to apply to a newer version in the future.
+That said, don&rsquo;t expect nice GUI integrations.
+What you&rsquo;ll get is a custom Gophish with bonus functionality tailored to a specific use case.
+For example, the second modification I&rsquo;m going to show will completely break the landing page functionality, so this is something to keep in mind.</p><h1 id=development-setup>Development setup</h1><p><em>You can skip this section if you have worked with Go and Gophish before.</em></p><p>Gophish is written in Go, which is one of my favorite programming languages.
+One thing that is particularly nice regarding Go is that it is a really boring language.
+Its syntax is easy to follow and understand.
+You also won&rsquo;t see much <a href=https://www.pythonpool.com/python-iterate-through-list/>syntactic sugar</a> or <a href=https://www.python.org/dev/peps/pep-0572/>magic expressions</a> that are unfamiliar to you, which makes it easy to dive in and write your own code.</p><p>I usually work on Linux, either Debian or Fedora, but basically it doesn&rsquo;t matter.
+Go is platform independent, so you can follow my steps on Windows or macOS, too.
+All you&rsquo;re going to need is a working Go setup (at least v1.10), git, and an editor of your choice - I recommend Visual Studio Code, but in the end it doesn&rsquo;t matter.</p><p>First of all, grab a copy of the Gophish code:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-bash data-lang=bash><span class=o>[</span>eder@lap<span class=o>]</span>$ git clone https://github.com/gophish/gophish.git
+Cloning into <span class=s1>&#39;gophish&#39;</span>...
+remote: Enumerating objects: 7764, <span class=k>done</span>.
+remote: Counting objects: 100% <span class=o>(</span>40/40<span class=o>)</span>, <span class=k>done</span>.
+remote: Compressing objects: 100% <span class=o>(</span>31/31<span class=o>)</span>, <span class=k>done</span>.
+remote: Total <span class=m>7764</span> <span class=o>(</span>delta 16<span class=o>)</span>, reused <span class=m>28</span> <span class=o>(</span>delta 9<span class=o>)</span>, pack-reused <span class=m>7724</span>
+Receiving objects: 100% <span class=o>(</span>7764/7764<span class=o>)</span>, 53.53 MiB <span class=p>|</span> 5.31 MiB/s, <span class=k>done</span>.
+Resolving deltas: 100% <span class=o>(</span>4687/4687<span class=o>)</span>, <span class=k>done</span>.</code></pre></td></tr></table></div></div><p>From within the cloned directory, you can run <code>go build</code> (if this is your first time, you may want to use <code>go build -v</code> to see more details on what is going on) to compile Gophish.
+When you&rsquo;re running the build for the first time, it will take a few minutes to fetch all dependencies and build them, but in general, Go is a language that compiles really fast, so compiling the changes later on will barely take seconds.
+You can simply run the resulting gophish binary, but you may want to point <code>listen_url</code> in the <code>phish_server</code> section in <code>config.json</code> to a port greater than 1024, unless you&rsquo;re working as root.
+My <code>config.json</code> I&rsquo;ll use during this post looks like this:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-json data-lang=json><span class=p>{</span>
+	<span class=nt>&#34;admin_server&#34;</span><span class=p>:</span> <span class=p>{</span>
+		<span class=nt>&#34;listen_url&#34;</span><span class=p>:</span> <span class=s2>&#34;127.0.0.1:3333&#34;</span><span class=p>,</span>
+		<span class=nt>&#34;use_tls&#34;</span><span class=p>:</span> <span class=kc>true</span><span class=p>,</span>
+		<span class=nt>&#34;cert_path&#34;</span><span class=p>:</span> <span class=s2>&#34;gophish_admin.crt&#34;</span><span class=p>,</span>
+		<span class=nt>&#34;key_path&#34;</span><span class=p>:</span> <span class=s2>&#34;gophish_admin.key&#34;</span>
+	<span class=p>},</span>
+	<span class=nt>&#34;phish_server&#34;</span><span class=p>:</span> <span class=p>{</span>
+		<span class=nt>&#34;listen_url&#34;</span><span class=p>:</span> <span class=s2>&#34;0.0.0.0:8080&#34;</span><span class=p>,</span>
+		<span class=nt>&#34;use_tls&#34;</span><span class=p>:</span> <span class=kc>false</span><span class=p>,</span>
+		<span class=nt>&#34;cert_path&#34;</span><span class=p>:</span> <span class=s2>&#34;example.crt&#34;</span><span class=p>,</span>
+		<span class=nt>&#34;key_path&#34;</span><span class=p>:</span> <span class=s2>&#34;example.key&#34;</span>
+	<span class=p>},</span>
+	<span class=nt>&#34;db_name&#34;</span><span class=p>:</span> <span class=s2>&#34;sqlite3&#34;</span><span class=p>,</span>
+	<span class=nt>&#34;db_path&#34;</span><span class=p>:</span> <span class=s2>&#34;gophish.db&#34;</span><span class=p>,</span>
+	<span class=nt>&#34;migrations_prefix&#34;</span><span class=p>:</span> <span class=s2>&#34;db/db_&#34;</span><span class=p>,</span>
+	<span class=nt>&#34;contact_address&#34;</span><span class=p>:</span> <span class=s2>&#34;&#34;</span><span class=p>,</span>
+	<span class=nt>&#34;logging&#34;</span><span class=p>:</span> <span class=p>{</span>
+		<span class=nt>&#34;filename&#34;</span><span class=p>:</span> <span class=s2>&#34;&#34;</span><span class=p>,</span>
+		<span class=nt>&#34;level&#34;</span><span class=p>:</span> <span class=s2>&#34;&#34;</span>
+	<span class=p>}</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div><p>When you first run gophish, it will generate a new random password for the first administrative user:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=hl><span class=lnt>29
+</span></span><span class=hl><span class=lnt>30
+</span></span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=hl><span class=lnt>36
+</span></span></code></pre></td><td class=lntd><pre class=chroma><code class=language-bash data-lang=bash><span class=o>[</span>eder@lap<span class=o>]</span>$ ./gophish 
+<span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>warning <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;No contact address has been configured.&#34;</span>
+<span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>warning <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Please consider adding a contact_address entry in your config.json&#34;</span>
+goose: migrating db environment <span class=s1>&#39;production&#39;</span>, current version: 0, target: <span class=m>20201201000000</span>
+OK    20160118194630_init.sql
+OK    20160131153104_0.1.2_add_event_details.sql
+OK    20160211211220_0.1.2_add_ignore_cert_errors.sql
+OK    20160217211342_0.1.2_create_from_col_results.sql
+OK    20160225173824_0.1.2_capture_credentials.sql
+OK    20160227180335_0.1.2_store-smtp-settings.sql
+OK    20160317214457_0.2_redirect_url.sql
+OK    20160605210903_0.2_campaign_scheduling.sql
+OK    20170104220731_0.2_result_statuses.sql
+OK    20170219122503_0.2.1_email_headers.sql
+OK    20170827141312_0.4_utc_dates.sql
+OK    20171027213457_0.4.1_maillogs.sql
+OK    20171208201932_0.4.1_next_send_date.sql
+OK    20180223101813_0.5.1_user_reporting.sql
+OK    20180524203752_0.7.0_result_last_modified.sql
+OK    20180527213648_0.7.0_store_email_request.sql
+OK    20180830215615_0.7.0_send_by_date.sql
+OK    20190105192341_0.8.0_rbac.sql
+OK    20191104103306_0.9.0_create_webhooks.sql
+OK    20200116000000_0.9.0_imap.sql
+OK    20200619000000_0.11.0_password_policy.sql
+OK    20200730000000_0.11.0_imap_ignore_cert_errors.sql
+OK    20200914000000_0.11.0_last_login.sql
+OK    20201201000000_0.11.0_account_locked.sql
+<span class=hl><span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Please login with the username admin and the password b998bc860f37fb41&#34;</span>
+</span><span class=hl><span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Starting phishing server at http://0.0.0.0:8080&#34;</span>
+</span><span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Starting IMAP monitor manager&#34;</span>
+<span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Background Worker Started Successfully - Waiting for Campaigns&#34;</span>
+<span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Creating new self-signed certificates for administration interface&#34;</span>
+<span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Starting new IMAP monitor for user admin&#34;</span>
+<span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;TLS Certificate Generation complete&#34;</span>
+<span class=hl><span class=nv>time</span><span class=o>=</span><span class=s2>&#34;2021-05-23T13:23:28+02:00&#34;</span> <span class=nv>level</span><span class=o>=</span>info <span class=nv>msg</span><span class=o>=</span><span class=s2>&#34;Starting admin server at https://127.0.0.1:3333&#34;</span></span></code></pre></td></tr></table></div></div><p>Navigating to <a href=https://localhost:3333>https://localhost:3333</a> in your browser will bring up the Gophish admin interface.
+Log in with <code>admin</code> and the password Gophish prints to the logs.
+After changing the password, everything is ready!</p><h1 id=first-modification-return-a-custom-404-page>First modification: Return a custom 404 page</h1><p>When you access Gophish&rsquo;s phishing listener, the page looks quite unpleasant:
+<img src=images/gophish_404.png alt="Gophish 404"></p><p>It would be nice to have something more appealing, at least for a 404 page, here.</p><p>First of all, it is required to find out where the 404 page is rendered.
+The Gophish code is well structured, nevertheless, it is not unusual that it takes some time to figure out where certain functionality is defined.
+In this case, the relevant code resides in <a href=https://github.com/gophish/gophish/blob/db63ee978dcd678caee0db71e5e1b91f9f293880/controllers/phish.go>controllers/phish.go</a>.
+You can find several calls to <code>http.NotFound</code>, which is a <a href=https://golang.org/pkg/net/http/#NotFound>convenience function built into Go&rsquo;s standard HTTP library</a>.</p><p>One of the nice things about Go is that it is entirely written in Go.
+This means, you can just click the function name in the documentation and it will bring you to <a href="https://golang.org/src/net/http/server.go?s=64787:64830#L2076">Go&rsquo;s builtin implementation of NotFound</a>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>2085
+</span><span class=lnt>2086
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=c1>// NotFound replies to the request with an HTTP 404 not found error.
+</span><span class=c1></span><span class=kd>func</span> <span class=nf>NotFound</span><span class=p>(</span><span class=nx>w</span> <span class=nx>ResponseWriter</span><span class=p>,</span> <span class=nx>r</span> <span class=o>*</span><span class=nx>Request</span><span class=p>)</span> <span class=p>{</span> <span class=nf>Error</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=s>&#34;404 page not found&#34;</span><span class=p>,</span> <span class=nx>StatusNotFound</span><span class=p>)</span> <span class=p>}</span></code></pre></td></tr></table></div></div><p>Surprisingly, this is really straight forward.
+The request passed in is not used any further, whereas the <code>ResponseWriter</code> is passed into the <code>Error</code> function, together with the string <code>404 page not found</code> and the constant <code>StatusNotFound</code>.
+The library lists the <a href=https://golang.org/pkg/net/http/#pkg-constants>defined constants</a> right in the beginning of the documentation (source is <a href=https://golang.org/src/net/http/status.go>here</a>), and you can see that this is just the value <code>404</code>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>40
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=nx>StatusNotFound</span>                     <span class=p>=</span> <span class=mi>404</span> <span class=c1>// RFC 7231, 6.5.4
+</span></code></pre></td></tr></table></div></div><p>Therefore, it is also possible to call the <code>Error</code> function with the value <code>404</code> directly, but using the name of the HTTP status is obviously a more ergonomic choice here.
+Long story short, no magic to take care of here.</p><p><a href="https://golang.org/src/net/http/server.go?s=64501:64553#L2068">This</a> is how the <code>Error</code> function looks like:<div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>2074
+</span><span class=lnt>2075
+</span><span class=lnt>2076
+</span><span class=lnt>2077
+</span><span class=lnt>2078
+</span><span class=lnt>2079
+</span><span class=lnt>2080
+</span><span class=lnt>2081
+</span><span class=lnt>2082
+</span><span class=lnt>2083
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=c1>// Error replies to the request with the specified error message and HTTP code.
+</span><span class=c1>// It does not otherwise end the request; the caller should ensure no further
+</span><span class=c1>// writes are done to w.
+</span><span class=c1>// The error message should be plain text.
+</span><span class=c1></span><span class=kd>func</span> <span class=nf>Error</span><span class=p>(</span><span class=nx>w</span> <span class=nx>ResponseWriter</span><span class=p>,</span> <span class=kt>error</span> <span class=kt>string</span><span class=p>,</span> <span class=nx>code</span> <span class=kt>int</span><span class=p>)</span> <span class=p>{</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>Header</span><span class=p>().</span><span class=nf>Set</span><span class=p>(</span><span class=s>&#34;Content-Type&#34;</span><span class=p>,</span> <span class=s>&#34;text/plain; charset=utf-8&#34;</span><span class=p>)</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>Header</span><span class=p>().</span><span class=nf>Set</span><span class=p>(</span><span class=s>&#34;X-Content-Type-Options&#34;</span><span class=p>,</span> <span class=s>&#34;nosniff&#34;</span><span class=p>)</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>WriteHeader</span><span class=p>(</span><span class=nx>code</span><span class=p>)</span>
+	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Fprintln</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=kt>error</span><span class=p>)</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div></p><p>Really easy, set some HTTP headers, set the status code and print the error message to the response body.
+The issue that arises though, is that this functionality is defined in the inner workings of Go, there is no functionality to pass a custom error message - <code>NotFound</code> does not take an argument that allows to pass a custom message.
+Since the source code is available, and luckily it is concise, we can just copy it over to the phish controller:</p><p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=c1>// Overwrite go&#39;s internal not found 
+</span><span class=c1></span><span class=kd>func</span> <span class=nf>customNotFound</span><span class=p>(</span><span class=nx>w</span> <span class=nx>http</span><span class=p>.</span><span class=nx>ResponseWriter</span><span class=p>,</span> <span class=nx>r</span> <span class=o>*</span><span class=nx>http</span><span class=p>.</span><span class=nx>Request</span><span class=p>)</span> <span class=p>{</span>
+	<span class=nx>http</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=s>&#34;&lt;html&gt;&lt;body&gt;Nothing to see here, except from this &lt;b&gt;custom&lt;/b&gt; error message&lt;/body&gt;&lt;/html&gt;&#34;</span><span class=p>,</span> <span class=nx>http</span><span class=p>.</span><span class=nx>StatusNotFound</span><span class=p>)</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div>After replacing all occurences of <code>http.NotFound</code> with <code>customNotFound</code> in the file, recompiling Gophish (just another <code>go build</code>) and running the new binary will produce the following 404 message when a site is not found:
+<img src=images/gophish_new_404.png alt="Gophish new 404">
+That was easy!
+Unfortunately, the sophisticated HTML placed for the sake of demonstrating the next issue is not rendered.
+There&rsquo;s custom text now, but it doesn&rsquo;t look unsuspicious yet.
+The issue here is that the <code>Error</code> function sets the HTTP Response&rsquo;s <code>Content-Type</code> to <code>text/plain</code>, instructing the browser to not render the response:<div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>2079
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=nx>w</span><span class=p>.</span><span class=nf>Header</span><span class=p>().</span><span class=nf>Set</span><span class=p>(</span><span class=s>&#34;Content-Type&#34;</span><span class=p>,</span> <span class=s>&#34;text/plain; charset=utf-8&#34;</span><span class=p>)</span></code></pre></td></tr></table></div></div>Again, this can easily be solved by copying over the builtin error function, changing the relevant header:</p><p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=c1>// Overwrite net.https Error with a custom one to set our own headers
+</span><span class=c1>// Go&#39;s internal Error func returns text/plain so browser&#39;s won&#39;t render the html
+</span><span class=c1></span><span class=kd>func</span> <span class=nf>customError</span><span class=p>(</span><span class=nx>w</span> <span class=nx>http</span><span class=p>.</span><span class=nx>ResponseWriter</span><span class=p>,</span> <span class=kt>error</span> <span class=kt>string</span><span class=p>,</span> <span class=nx>code</span> <span class=kt>int</span><span class=p>)</span> <span class=p>{</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>Header</span><span class=p>().</span><span class=nf>Set</span><span class=p>(</span><span class=s>&#34;Content-Type&#34;</span><span class=p>,</span> <span class=s>&#34;text/html; charset=utf-8&#34;</span><span class=p>)</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>Header</span><span class=p>().</span><span class=nf>Set</span><span class=p>(</span><span class=s>&#34;X-Content-Type-Options&#34;</span><span class=p>,</span> <span class=s>&#34;nosniff&#34;</span><span class=p>)</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>WriteHeader</span><span class=p>(</span><span class=nx>code</span><span class=p>)</span>
+	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Fprintln</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=kt>error</span><span class=p>)</span>
+<span class=p>}</span>
+
+<span class=c1>// Overwrite go&#39;s internal not found
+</span><span class=c1></span><span class=kd>func</span> <span class=nf>customNotFound</span><span class=p>(</span><span class=nx>w</span> <span class=nx>http</span><span class=p>.</span><span class=nx>ResponseWriter</span><span class=p>,</span> <span class=nx>r</span> <span class=o>*</span><span class=nx>http</span><span class=p>.</span><span class=nx>Request</span><span class=p>)</span> <span class=p>{</span>
+	<span class=nf>customError</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=s>&#34;&lt;html&gt;&lt;body&gt;Nothing to see here, except from this &lt;b&gt;custom&lt;/b&gt; error message&lt;/body&gt;&lt;/html&gt;&#34;</span><span class=p>,</span> <span class=nx>http</span><span class=p>.</span><span class=nx>StatusNotFound</span><span class=p>)</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div>The snippet already contains the modified <code>customNotFound</code> defined earlier.
+When being stressed and tired, changing references is one thing often overlooked.
+I recommend you to somehow track what you intend to change.
+You can use your text editor to find all relevant occurences and replace them automatically with the desired function.
+I also recommend you to step through all occurrences, otherwise you may also replace stuff you did not intend to change; This is not the place to save time by working sloppily.
+The result looks like this:
+<img src=images/gophish_final_404.png alt="Gophish final 404">
+That&rsquo;s what I call a good looking, unsuspicious error message rendered from HTML!
+Jokes aside, this is everything it takes to get more control over 404 error pages in Gophish.
+You could now inline your HTML, I went for a more fancy approach and used Go&rsquo;s templating engine and a nginx error page to render the final page from a file.
+As this is barely related to changing the Gophish behavior and just bringing in personal preferences, I&rsquo;ll just leave you with <a href=https://github.com/edermi/gophish_mods/commit/4a65e390cd0914ab77ea56ca03edc3cc67821d45>the code</a> additionally containing my 10 LOC templating logic plus the nginx template.
+It is using Go&rsquo;s templating instead of Gophish&rsquo;s internal templating functionality (which is just some abstraction to Go&rsquo;s templating, really not a big deal).
+As I said, keeping changes simple and future-compatible is one of my goals when modifying stuff.
+The less you change, the better.</p><h1 id=second-modification-using-http-auth-for-phishing>Second modification: Using HTTP auth for phishing</h1><h2 id=quick-intro>Quick intro</h2><p>Gophish&rsquo;s workflow for phishing is to send mails to users, which then hopefully click the link and submit their credentials on the landing page.
+We maintain a huge set of ready-to-use templates with different functionality and stories internally, but all of them are regular web pages that ultimately require the user to submit their data in the embedded form.
+Recently, I came across a target that invested tremendous efforts on training their employees.
+75% of the targets reported my phishing attempts, regardless of the story, and only 3% submitted their data, all of them on a story that unintentionally matched a legit internal bonus program, so even these small numbers were pure luck.
+Just to be clear: Particularly one of my stories was top notch and I was absolutely sure at least 20%, in the worst case, will fall for it.
+No one did.
+<img src=images/outrage.gif alt="Outrage panda"></p><p>This brings me to the second Gophish modification I came up with.
+Instead of hosting a landing page and trying to convince the user that this is the right place to put their credentials, I&rsquo;ll ask them to authenticate via HTTP Basic Authentication (see <a href=https://en.wikipedia.org/wiki/Basic_access_authentication>Wikipedia</a>, <a href=https://developer.mozilla.org/en-US/docs/Web/HTTP/Authentication>MDN</a>).
+HTTP has an extensible authentication mechanism built into the standard.
+The simplest one is <a href=https://datatracker.ietf.org/doc/html/rfc7617>Basic Authentication</a>, which works by supplying the Base64 encoded credentials in the <code>Authorization</code> HTTP header.</p><p>Of course, users do not set the HTTP header on their own.
+If a page that requires authentication is visited, the server checks for the existence of the header (and, of course, performs authentication and authorization).
+If it is not there, the server can respond with a <code>401 Unauthorized</code> HTTP response and a <code>WWW-Authenticate</code> header, specifying the expected authentication type (in this case <code>Basic</code>) and the name of the realm the user is authenticating to.
+The string can be freely chosen and is often displayed to the user to indicate where he is currently authenticating to.
+For example, a good value may be <code>Company XXX Internet Proxy Authentication</code>.</p><p>When the browser receives this request, an authentication window will pop up.
+The interesting thing here is, that this is a browser or, in the best case, operating system window, depending on the victims browser.
+To the user, it doesn&rsquo;t feel like entering credentials on a website, but giving the OS / Browser credentials to access the site in the first place.
+After the user enters credentials, the browser will take care about the technical details like setting the appropriate headers, to make everything work in the end.
+If you&rsquo;re interested in technical details, the links spread across the text are an excellent starting point.</p><h2 id=making-gophish-capable-of-http-auth>Making Gophish capable of HTTP auth</h2><p>So, after the longish quick intro to the use case, let&rsquo;s find out how to implement this in Gophish.
+Ideally, the implementation is interoperable with the whole Gophish workflow, so everything should work from sending mails to receiving the data and finally using Gophish&rsquo;s builtin analysis tools for evaluating success of the campaign.
+To achieve this, the best idea is probably to modify the landing page listener such that it does not render a phishing page, but issues an HTTP basic authentication request.</p><p>Again, <code>controllers/phish.go</code>, more concisely, <a href=https://github.com/gophish/gophish/blob/db63ee978dcd678caee0db71e5e1b91f9f293880/controllers/phish.go#L271>renderPhishResponse</a>, is the main part of interest here:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>268
+</span><span class=lnt>269
+</span><span class=lnt>270
+</span><span class=lnt>271
+</span><span class=lnt>272
+</span><span class=lnt>273
+</span><span class=lnt>274
+</span><span class=lnt>275
+</span><span class=lnt>276
+</span><span class=lnt>277
+</span><span class=lnt>278
+</span><span class=lnt>279
+</span><span class=lnt>280
+</span><span class=lnt>281
+</span><span class=lnt>282
+</span><span class=lnt>283
+</span><span class=lnt>284
+</span><span class=lnt>285
+</span><span class=lnt>286
+</span><span class=lnt>287
+</span><span class=lnt>288
+</span><span class=lnt>289
+</span><span class=lnt>290
+</span><span class=lnt>291
+</span><span class=lnt>292
+</span><span class=lnt>293
+</span><span class=lnt>294
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=c1>// renderPhishResponse handles rendering the correct response to the phishing
+</span><span class=c1>// connection. This usually involves writing out the page HTML or redirecting
+</span><span class=c1>// the user to the correct URL.
+</span><span class=c1></span><span class=kd>func</span> <span class=nf>renderPhishResponse</span><span class=p>(</span><span class=nx>w</span> <span class=nx>http</span><span class=p>.</span><span class=nx>ResponseWriter</span><span class=p>,</span> <span class=nx>r</span> <span class=o>*</span><span class=nx>http</span><span class=p>.</span><span class=nx>Request</span><span class=p>,</span> <span class=nx>ptx</span> <span class=nx>models</span><span class=p>.</span><span class=nx>PhishingTemplateContext</span><span class=p>,</span> <span class=nx>p</span> <span class=nx>models</span><span class=p>.</span><span class=nx>Page</span><span class=p>)</span> <span class=p>{</span>
+	<span class=c1>// If the request was a form submit and a redirect URL was specified, we
+</span><span class=c1></span>	<span class=c1>// should send the user to that URL
+</span><span class=c1></span>	<span class=k>if</span> <span class=nx>r</span><span class=p>.</span><span class=nx>Method</span> <span class=o>==</span> <span class=s>&#34;POST&#34;</span> <span class=p>{</span>
+		<span class=k>if</span> <span class=nx>p</span><span class=p>.</span><span class=nx>RedirectURL</span> <span class=o>!=</span> <span class=s>&#34;&#34;</span> <span class=p>{</span>
+			<span class=nx>redirectURL</span><span class=p>,</span> <span class=nx>err</span> <span class=o>:=</span> <span class=nx>models</span><span class=p>.</span><span class=nf>ExecuteTemplate</span><span class=p>(</span><span class=nx>p</span><span class=p>.</span><span class=nx>RedirectURL</span><span class=p>,</span> <span class=nx>ptx</span><span class=p>)</span>
+			<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+				<span class=nx>log</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span>
+				<span class=nx>http</span><span class=p>.</span><span class=nf>NotFound</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=nx>r</span><span class=p>)</span>
+				<span class=k>return</span>
+			<span class=p>}</span>
+			<span class=nx>http</span><span class=p>.</span><span class=nf>Redirect</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=nx>r</span><span class=p>,</span> <span class=nx>redirectURL</span><span class=p>,</span> <span class=nx>http</span><span class=p>.</span><span class=nx>StatusFound</span><span class=p>)</span>
+			<span class=k>return</span>
+		<span class=p>}</span>
+	<span class=p>}</span>
+	<span class=c1>// Otherwise, we just need to write out the templated HTML
+</span><span class=c1></span>	<span class=nx>html</span><span class=p>,</span> <span class=nx>err</span> <span class=o>:=</span> <span class=nx>models</span><span class=p>.</span><span class=nf>ExecuteTemplate</span><span class=p>(</span><span class=nx>p</span><span class=p>.</span><span class=nx>HTML</span><span class=p>,</span> <span class=nx>ptx</span><span class=p>)</span>
+	<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+		<span class=nx>log</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span>
+		<span class=nx>http</span><span class=p>.</span><span class=nf>NotFound</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=nx>r</span><span class=p>)</span>
+		<span class=k>return</span>
+	<span class=p>}</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>Write</span><span class=p>([]</span><span class=nb>byte</span><span class=p>(</span><span class=nx>html</span><span class=p>))</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div><p>As you can see, the function handles two different cases: First, a <code>POST</code> request indicates that a user submitted data.
+If a redirect URL is specified, the user is sent there.
+If the request is not a <code>POST</code> request or there is no redirect URL specified, the page is rendered as is.</p><p>Before changing anything, there are a few things to note:</p><ul><li>Credentials are not handled here.
+In fact, handling of the submitted data is a bit difficult to find and understand, if you&rsquo;re interested, you may give it a shot before continue reading.</li><li>It is optional to specify a redirect URL in Gophish.
+In this case, it is probably a good idea to overthink this and make it mandatory, so the existing battle-tested redirection logic of Gophish will send a user to a legit site after entering credentials.</li><li>Gophish assumes that <code>GET</code> requests are users landing on the page while a <code>POST</code> request means that a user submitted data.
+There are no further abstractions or ways to deviate from this concept, so unless building these abstractions, the modifications for HTTP auth based phishing will replace the current logic.
+This means that a Gophish server with the patches will not be able to carry out regular campaigns.
+Implementing a GUI switch and coexistence of both types will take additional, non-trivial changes.
+I accept this limitation.</li></ul><p>In this case, I&rsquo;ll make coarse steps compared to the first modification.
+I&rsquo;ll present the modifications and walk through them.
+Getting there basically works the same as depicted above, and it barely took me an hour in the middle of the night, so don&rsquo;t be afraid when it comes to modifying stuff without knowing where it will take you.
+This is the new <code>renderPhishResponse</code>:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=c1>// Modified http auth version
+</span><span class=c1></span><span class=kd>func</span> <span class=nf>renderPhishResponse</span><span class=p>(</span><span class=nx>w</span> <span class=nx>http</span><span class=p>.</span><span class=nx>ResponseWriter</span><span class=p>,</span> <span class=nx>r</span> <span class=o>*</span><span class=nx>http</span><span class=p>.</span><span class=nx>Request</span><span class=p>,</span> <span class=nx>ptx</span> <span class=nx>models</span><span class=p>.</span><span class=nx>PhishingTemplateContext</span><span class=p>,</span> <span class=nx>p</span> <span class=nx>models</span><span class=p>.</span><span class=nx>Page</span><span class=p>)</span> <span class=p>{</span>
+	<span class=nx>_</span><span class=p>,</span> <span class=nx>_</span><span class=p>,</span> <span class=nx>ok</span> <span class=o>:=</span> <span class=nx>r</span><span class=p>.</span><span class=nf>BasicAuth</span><span class=p>()</span>
+	<span class=c1>// If the request contains a Basic Auth header, send the user to the redirect URL
+</span><span class=c1></span>	<span class=c1>// TODO: Enforce existence of a redirect URL
+</span><span class=c1></span>	<span class=k>if</span> <span class=nx>ok</span> <span class=p>{</span>
+		<span class=nx>redirectURL</span><span class=p>,</span> <span class=nx>err</span> <span class=o>:=</span> <span class=nx>models</span><span class=p>.</span><span class=nf>ExecuteTemplate</span><span class=p>(</span><span class=nx>p</span><span class=p>.</span><span class=nx>RedirectURL</span><span class=p>,</span> <span class=nx>ptx</span><span class=p>)</span>
+		<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+			<span class=nx>log</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span>
+			<span class=nf>customNotFound</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=nx>r</span><span class=p>)</span>
+			<span class=k>return</span>
+		<span class=p>}</span>
+		<span class=nx>http</span><span class=p>.</span><span class=nf>Redirect</span><span class=p>(</span><span class=nx>w</span><span class=p>,</span> <span class=nx>r</span><span class=p>,</span> <span class=nx>redirectURL</span><span class=p>,</span> <span class=nx>http</span><span class=p>.</span><span class=nx>StatusFound</span><span class=p>)</span>
+		<span class=k>return</span>
+	<span class=p>}</span>
+	<span class=c1>// Otherwise, send a response containing the WWW-Authenticate header and
+</span><span class=c1></span>	<span class=c1>// render the template as string there
+</span><span class=c1></span>	<span class=nx>stp</span> <span class=o>:=</span> <span class=nx>bm</span><span class=p>.</span><span class=nf>StripTagsPolicy</span><span class=p>()</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>Header</span><span class=p>().</span><span class=nf>Add</span><span class=p>(</span><span class=s>&#34;WWW-Authenticate&#34;</span><span class=p>,</span> <span class=nx>fmt</span><span class=p>.</span><span class=nf>Sprintf</span><span class=p>(</span><span class=s>`Basic realm=&#34;%s&#34;`</span><span class=p>,</span> <span class=nx>stp</span><span class=p>.</span><span class=nf>Sanitize</span><span class=p>(</span><span class=nx>p</span><span class=p>.</span><span class=nx>HTML</span><span class=p>)))</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>WriteHeader</span><span class=p>(</span><span class=nx>http</span><span class=p>.</span><span class=nx>StatusUnauthorized</span><span class=p>)</span>
+	<span class=nx>w</span><span class=p>.</span><span class=nf>Write</span><span class=p>([]</span><span class=nb>byte</span><span class=p>(</span><span class=s>`{&#34;message&#34;: &#34;You are not authorized to view this page.&#34;}`</span><span class=p>))</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div><p>In line 3, you can see that a call to the <code>BasicAuth</code> method of the request.
+The <a href=https://golang.org/pkg/net/http/#Request.BasicAuth>BasicAuth</a> function is again already defined by Go&rsquo;s <code>net/http</code> library and basically returns the provided username, password, and if these values have been provided.
+Username and password are not relevant here as they&rsquo;re parsed somewhere else in the code (again, try to stick to the existing workflow).
+Here, only the existence of authentication data is checked.
+If authentication data is present, redirect the user to the redirect URL specified in the landing page, otherwise, add an HTTP <code>WWW-Authenticate</code> header and set the HTTP status to <code>StatusUnauthorized</code> (401).
+Note that this snippet contains the <code>customNotFound</code> I introduced in the first example.
+When working on a vanilla code base, <code>http.NotFound</code> is surely a better choice here.
+Also note that the realm is set to the HTML code of the landing page.
+This allows to set the realm directly in the landing page editor in the web interface, but I have to get rid of some HTML tags.
+This is what <code>StripTagsPolicy</code> and <code>stp.Sanitize()</code> is for.
+I decided the quickest and easiest way to remove all HTML tags is to use <a href=https://github.com/microcosm-cc/bluemonday>bluemonday</a>, a library for sanitizing HTML.
+The page object does not expose raw text and this seemed the most straight forward way to remove the HTML tags without doing more substantial changes to Gophish.</p><p>So, now there&rsquo;s no differentiation between <code>GET</code> and <code>POST</code> - what matters is if there is an HTTP Basic Auth sent along, and if not, it is requested.
+By changing this function, most of the work is already done.
+What&rsquo;s missing though is the most important part - retrieving the credentials.
+The lengthy function <a href=https://github.com/gophish/gophish/blob/db63ee978dcd678caee0db71e5e1b91f9f293880/controllers/phish.go#L202>PhishHandler</a> takes care of this:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>248
+</span><span class=lnt>249
+</span><span class=lnt>250
+</span><span class=lnt>251
+</span><span class=lnt>252
+</span><span class=lnt>253
+</span><span class=lnt>254
+</span><span class=lnt>255
+</span><span class=lnt>256
+</span><span class=lnt>257
+</span><span class=lnt>258
+</span><span class=lnt>259
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=k>switch</span> <span class=p>{</span>
+<span class=k>case</span> <span class=nx>r</span><span class=p>.</span><span class=nx>Method</span> <span class=o>==</span> <span class=s>&#34;GET&#34;</span><span class=p>:</span>
+	<span class=nx>err</span> <span class=p>=</span> <span class=nx>rs</span><span class=p>.</span><span class=nf>HandleClickedLink</span><span class=p>(</span><span class=nx>d</span><span class=p>)</span>
+	<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+		<span class=nx>log</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span>
+	<span class=p>}</span>
+<span class=k>case</span> <span class=nx>r</span><span class=p>.</span><span class=nx>Method</span> <span class=o>==</span> <span class=s>&#34;POST&#34;</span><span class=p>:</span>
+	<span class=nx>err</span> <span class=p>=</span> <span class=nx>rs</span><span class=p>.</span><span class=nf>HandleFormSubmit</span><span class=p>(</span><span class=nx>d</span><span class=p>)</span>
+	<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+		<span class=nx>log</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span>
+	<span class=p>}</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div><p>In case of a <code>GET</code> request, the &ldquo;Link was clicked&rdquo; event is fired, in case of a <code>POST</code> request, <code>HandleFormSubmit</code> will retrieve the data and insert it into the database.
+I&rsquo;m not going to take a closer look at <code>HandleFormSubmit</code>, in essence, and this may be surprising, Gophish is not aware of the concept of usernames and passwords, and actually it doesn&rsquo;t need to.
+Gophish has a type called <code>EventDetails</code> (can be found in <a href=https://github.com/gophish/gophish/blob/db63ee978dcd678caee0db71e5e1b91f9f293880/models/campaign.go#L87>models/campaign.go</a>) that stores User Agent and Payload, the latter one containing all parameters sent - including username and password.
+This behavior is by the way also the reason, why you sometimes see more data in the campaign results, for example CSRF tokens or random crap modern web frameworks put there.
+Gophish simply stores and displays everything that was sent.
+Username and password usually happen to be in that data.</p><p>In order to record the data sent via HTTP auth, there are two things to do: Extract the data from the <code>Authorization</code> header and present it to Gophish in a way that it believes this was a request body (again, this is the easiest, not the best way).</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>248
+</span><span class=lnt>249
+</span><span class=lnt>250
+</span><span class=lnt>251
+</span><span class=lnt>252
+</span><span class=lnt>253
+</span><span class=lnt>254
+</span><span class=lnt>255
+</span><span class=lnt>256
+</span><span class=lnt>257
+</span><span class=lnt>258
+</span><span class=lnt>259
+</span><span class=lnt>260
+</span><span class=lnt>261
+</span><span class=lnt>262
+</span><span class=lnt>263
+</span><span class=lnt>264
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=nx>username</span><span class=p>,</span> <span class=nx>password</span><span class=p>,</span> <span class=nx>ok</span> <span class=o>:=</span> <span class=nx>r</span><span class=p>.</span><span class=nf>BasicAuth</span><span class=p>()</span>
+<span class=k>if</span> <span class=p>!</span><span class=nx>ok</span> <span class=p>{</span>
+	<span class=nx>err</span> <span class=p>=</span> <span class=nx>rs</span><span class=p>.</span><span class=nf>HandleClickedLink</span><span class=p>(</span><span class=nx>d</span><span class=p>)</span>
+	<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+		<span class=nx>log</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span>
+	<span class=p>}</span>
+<span class=p>}</span> <span class=k>else</span> <span class=p>{</span>
+	<span class=c1>// d contains a Payload member of type net.url.Values
+</span><span class=c1></span>	<span class=c1>// which itself is just map[string][]string
+</span><span class=c1></span>	<span class=c1>// Manually overwrite it with basic auth data
+</span><span class=c1></span>	<span class=nx>payload</span> <span class=o>:=</span> <span class=kd>map</span><span class=p>[</span><span class=kt>string</span><span class=p>][]</span><span class=kt>string</span><span class=p>{</span><span class=s>&#34;Username&#34;</span><span class=p>:</span> <span class=p>[]</span><span class=kt>string</span><span class=p>{</span><span class=nx>username</span><span class=p>},</span> <span class=s>&#34;Password&#34;</span><span class=p>:</span> <span class=p>[]</span><span class=kt>string</span><span class=p>{</span><span class=nx>password</span><span class=p>}}</span>
+	<span class=nx>d</span><span class=p>.</span><span class=nx>Payload</span> <span class=p>=</span> <span class=nx>payload</span>
+	<span class=nx>err</span> <span class=p>=</span> <span class=nx>rs</span><span class=p>.</span><span class=nf>HandleFormSubmit</span><span class=p>(</span><span class=nx>d</span><span class=p>)</span>
+	<span class=k>if</span> <span class=nx>err</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+		<span class=nx>log</span><span class=p>.</span><span class=nf>Error</span><span class=p>(</span><span class=nx>err</span><span class=p>)</span>
+	<span class=p>}</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div><p>This time, I&rsquo;m interested in username and password, so I keep them in appropriately named variables.
+In case the Basic auth was not <code>ok</code>, meaning there was not Basic auth at all, the click is recorded.
+If there was a Basic auth header, the payload for the <code>EventDetails</code> struct is manually constructed and the modified object is submitted to <code>HandleFormSubmit</code>.
+Admittedly, from a coding point of view, creating the data structure in a one-liner is the most challenging part in the whole blog post if you&rsquo;re not familiar with Go.</p><p>That&rsquo;s it!
+There&rsquo;s only a small change to <code>models/page.go</code> missing in order to enforce the existence of a redirect URL, but this is nothing that is required for the above code to work.
+In the beginning of the file, I added a new error type:</p><div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>1
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=kd>var</span> <span class=nx>ErrRedirectUrlNotSpecified</span> <span class=p>=</span> <span class=nx>errors</span><span class=p>.</span><span class=nf>New</span><span class=p>(</span><span class=s>&#34;Redirect URL not specified&#34;</span><span class=p>)</span></code></pre></td></tr></table></div></div><p>Later on, in <a href=https://github.com/gophish/gophish/blob/db63ee978dcd678caee0db71e5e1b91f9f293880/models/page.go#L29>parseHTML</a>, a check is introduced to make sure the redirect URL is not empty:<div class=highlight><div class=chroma><table class=lntable><tr><td class=lntd><pre class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td><td class=lntd><pre class=chroma><code class=language-go data-lang=go><span class=k>if</span> <span class=nx>p</span><span class=p>.</span><span class=nx>Name</span> <span class=o>==</span> <span class=s>&#34;&#34;</span> <span class=p>{</span>
+	<span class=k>return</span> <span class=nx>ErrPageNameNotSpecified</span>
+<span class=p>}</span>
+<span class=k>if</span> <span class=nx>p</span><span class=p>.</span><span class=nx>RedirectURL</span> <span class=o>==</span> <span class=s>&#34;&#34;</span> <span class=p>{</span>
+	<span class=k>return</span> <span class=nx>ErrRedirectUrlNotSpecified</span>
+<span class=p>}</span></code></pre></td></tr></table></div></div></p><h2 id=demo-time>Demo time</h2><p>I&rsquo;m just reusing the images from my tweet here, they show how it looks like when a user clicks the link:
+<img src=images/HTTP_auth_request.jpeg alt="User clicked link"></p><p>This is what the operator sees in the Gophish logs:
+<img src=images/http_auth_submitted.png alt="Auth submitted"></p><h1 id=closing-thoughts-and-tips>Closing thoughts and tips</h1><p>First of all, you can find all modifications <a href=https://github.com/edermi/gophish_mods>here</a>.
+When I&rsquo;m stuck while modding, I usually insert some print statements or start the debugger to verify my assumptions.
+Assumptions are important.
+Take a piece of paper and draw the control and data flows.
+Verify your assumptions by going through the code step by step.
+You&rsquo;ll notice that at some point the things that happen deviate from what you expect, often because your assumptions are too vague or simply wrong.
+When browsers are involved, I usually do page reloads only from inspector with cache disabled.
+I&rsquo;ve lost countless hours before realizing that the browser cache still serves a broken variant and my code already worked two hours before.
+Taking breaks and going for a walk or a nap also help freeing the mind when you&rsquo;re stuck.</p><p>I hope this blog post encourages people to be less reluctant to touch other people&rsquo;s code.
+Especially for projects written in Go, it is often quite easy to understand what&rsquo;s going on and especially small changes are really easy to implement.
+I&rsquo;ve had many cases where tools were missing small features or didn&rsquo;t work in the concrete scenario, most of them were easy to overcome with some custom patches.
+Apart from that, I generally recommend all Red Teamers to know what your daily tradecraft does behind the scenes, some things may surprise you and uncover your operation right after you started&mldr;</p><blockquote class=twitter-tweet><p lang=en dir=ltr>Did you know that <a href="https://twitter.com/hashtag/evilginx?src=hash&ref_src=twsrc%5Etfw">#evilginx</a> sets the X-Evilginx header to the value of the domain that is phishing your users?<br><br>Defenders: Check your logs<br>Attackers: mind your opsec</p>&mdash; Michael Eder (@michael_eder_) <a href="https://twitter.com/michael_eder_/status/1191396074373730304?ref_src=twsrc%5Etfw">November 4, 2019</a></blockquote><script async src=https://platform.twitter.com/widgets.js></script><p>I also recommend you to look at other branches than main/master and to go through Pull requests.
+Often you find interesting stuff you can reuse, for example there&rsquo;s a quite old <a href=https://github.com/gophish/gophish/tree/beef-integration>beef-integration branch</a> in the Gophish repository and there are Pull requests like <a href=https://github.com/gophish/gophish/pull/2162>Implement functionality to support custom RId - Ability to specify both the character set and length</a>.
+Just because stuff isn&rsquo;t there, for example alternative means of delivering messages, e.g. via WebHook, doesn&rsquo;t mean it has to be this way forever.</p><p>I&rsquo;d love to hear your feedback, so if this post somehow helped you or you have any questions or other feedback, just get in touch.</p><div class=blog-tags><a href=https://edermi.github.io//tags/gophish/>Gophish</a>&nbsp;</div></article><ul class="pager blog-pager"><li class=previous><a href=https://edermi.github.io/post/2020/abusing_accounts_that_changed_passwords/ data-toggle=tooltip data-placement=top title="Abusing accounts that already changed their password">&larr; Previous Post</a></li></ul></div></div></div><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center footer-links"><li><a href=mailto:spam-blog@michael-eder.net title="Email me"><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i></span></a></li><li><a href=https://github.com/edermi title=GitHub><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i></span></a></li><li><a href=https://twitter.com/michael_eder_ title=Twitter><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-twitter fa-stack-1x fa-inverse"></i></span></a></li><li><a href=https://linkedin.com/in/michael-eder-34b923120 title=LinkedIn><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-linkedin fa-stack-1x fa-inverse"></i></span></a></li><li><a href=https://www.xing.com/profile/Michael_Eder65 title=Xing><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-xing fa-stack-1x fa-inverse"></i></span></a></li><li><a href title=RSS><span class="fa-stack fa-lg"><i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-rss fa-stack-1x fa-inverse"></i></span></a></li></ul><p class="credits copyright text-muted">Michael Eder
+&nbsp;&bull;&nbsp;&copy;
+2021
+&nbsp;&bull;&nbsp;
+<a href=https://edermi.github.io/>edermi's Blog</a></p><p class="credits theme-by text-muted"><a href=https://gohugo.io>Hugo v0.83.1</a> powered &nbsp;&bull;&nbsp; Theme <a href=https://github.com/halogenica/beautifulhugo>Beautiful Hugo</a> adapted from <a href=https://deanattali.com/beautiful-jekyll/>Beautiful Jekyll</a>
+&nbsp;&bull;&nbsp;[<a href=https://github.com/edermi/edermi.github.io/tree/da72b5d5edf69b9ea5977280aa4789b6578f6e4c>da72b5d5</a>]</p></div></div></div></footer><script src=https://edermi.github.io/js/katex.min.js></script><script src=https://edermi.github.io/js/auto-render.min.js></script><script src=https://edermi.github.io/js/jquery.min.js></script><script src=https://edermi.github.io/js/bootstrap.min.js></script><script src=https://edermi.github.io/js/main.js></script><script>renderMathInElement(document.body)</script><script src=https://edermi.github.io/js/photoswipe.min.js></script><script src=https://edermi.github.io/js/photoswipe-ui-default.min.js></script><script src=https://edermi.github.io/js/load-photoswipe.js></script></body></html>
