@@ -1,7 +1,7 @@
 ---
 title: "Modding Gophish"
 date: 2021-05-24
-tags: ["Gophish"]
+tags: ["gophish", "red team", "phishing"]
 ---
 
 ***TL;DR***: *I'll shine a light on Gophish and how to modify it to change behavior or introduce/remove functionality. At the end of this post, you'll know how to host custom 404 pages in Gophish and how to abuse HTTP basic auth instead of login forms embedded on the landing page to obtain juicy creds.*

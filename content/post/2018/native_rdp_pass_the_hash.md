@@ -1,7 +1,7 @@
 +++
 date = "2018-05-06"
 title = "Passing the hash with native RDP client (mstsc.exe)"
-tags = ["RDP", "mimikatz", "pass the hash", "pth"]
+tags = ["RDP", "mimikatz", "pass the hash", "pth", "windows", "red team"]
 +++
 
 *__TL;DR:__ If the remote server allows Restricted Admin login, it is possible to login via RDP by passing the hash using the native Windows RDP client `mstsc.exe`. (You'll need mimikatz or something else to inject the hash into the process)*
