@@ -1,0 +1,252 @@
+<!doctype html><html lang=en itemscope itemtype=http://schema.org/WebPage>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="IE=edge">
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Vulnerabilities on vmwareidentity.de (XSS) and in VMware UEM (exportable authentication certificate) - edermi's Blog</title>
+<meta name=description content="This post is a short notice about vulnerabilities in VMware products I found earlier this year. During a penetration test of a freshly built environment, I took a closer look at VMware Unified Access Gateway (UAG) in combination with devices enrolled and managed via VMware Unified Endpoint Management (UEM). I found a reflected XSS vulnerability on VMware&rsquo;s authenticator vmwareidentity.de that can be abused by sending links to unauthenticated victims. Also, I found it possible to export a user&rsquo;s authentication certificate, which allows to access zero trust protected resources without access to the user&rsquo;s device or account on a trusted system.">
+<meta name=author content="Michael Eder"><script type=application/ld+json>{"@context":"http://schema.org","@type":"WebSite","name":"edermi\u0027s Blog","url":"https:\/\/edermi.github.io\/"}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Organization","name":"","url":"https:\/\/edermi.github.io\/"}</script>
+<script type=application/ld+json>{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https:\/\/edermi.github.io\/","name":"home"}},{"@type":"ListItem","position":3,"item":{"@id":"https:\/\/edermi.github.io\/post\/2021\/vmware_vulnerabilities\/","name":"Vulnerabilities on vmwareidentity.de ( xss) and in vmware uem (exportable authentication certificate)"}}]}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Article","author":{"name":"Michael Eder"},"headline":"Vulnerabilities on vmwareidentity.de (XSS) and in VMware UEM (exportable authentication certificate)","description":"This post is a short notice about vulnerabilities in VMware products I found earlier this year. During a penetration test of a freshly built environment, I took a closer look at VMware Unified Access Gateway (UAG) in combination with devices enrolled and managed via VMware Unified Endpoint Management (UEM). I found a reflected XSS vulnerability on VMware\u0026rsquo;s authenticator vmwareidentity.de that can be abused by sending links to unauthenticated victims. Also, I found it possible to export a user\u0026rsquo;s authentication certificate, which allows to access zero trust protected resources without access to the user\u0026rsquo;s device or account on a trusted system.","inLanguage":"en","wordCount":1011,"datePublished":"2021-08-29T00:00:00","dateModified":"2021-08-29T00:00:00","image":"https:\/\/edermi.github.io\/","keywords":["red team, phishing, mimikatz, disclosure, XSS, vmware"],"mainEntityOfPage":"https:\/\/edermi.github.io\/post\/2021\/vmware_vulnerabilities\/","publisher":{"@type":"Organization","name":"https:\/\/edermi.github.io\/","logo":{"@type":"ImageObject","url":"https:\/\/edermi.github.io\/","height":60,"width":60}}}</script>
+<meta property="og:title" content="Vulnerabilities on vmwareidentity.de (XSS) and in VMware UEM (exportable authentication certificate)">
+<meta property="og:description" content="This post is a short notice about vulnerabilities in VMware products I found earlier this year. During a penetration test of a freshly built environment, I took a closer look at VMware Unified Access Gateway (UAG) in combination with devices enrolled and managed via VMware Unified Endpoint Management (UEM). I found a reflected XSS vulnerability on VMware&rsquo;s authenticator vmwareidentity.de that can be abused by sending links to unauthenticated victims. Also, I found it possible to export a user&rsquo;s authentication certificate, which allows to access zero trust protected resources without access to the user&rsquo;s device or account on a trusted system.">
+<meta property="og:url" content="https://edermi.github.io/post/2021/vmware_vulnerabilities/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="edermi's Blog">
+<meta name=twitter:title content="Vulnerabilities on vmwareidentity.de (XSS) and in VMware UEM …">
+<meta name=twitter:description content="This post is a short notice about vulnerabilities in VMware products I found earlier this year. During a penetration test of a freshly built environment, I took a closer look at VMware Unified Access …">
+<meta name=twitter:card content="summary">
+<meta name=twitter:site content="@michael_eder_">
+<meta name=twitter:creator content="@michael_eder_">
+<meta name=generator content="Hugo 0.87.0">
+<link rel=alternate href=https://edermi.github.io/index.xml type=application/rss+xml title="edermi's Blog"><link rel=stylesheet href=https://edermi.github.io/css/katex.min.css>
+<link rel=stylesheet href=https://edermi.github.io/fontawesome/css/all.css>
+<link rel=stylesheet href=https://edermi.github.io/css/bootstrap.min.css><link rel=stylesheet href=https://edermi.github.io/css/main.css><link rel=stylesheet href=https://edermi.github.io/css/fonts.css><link rel=stylesheet href=https://edermi.github.io/css/syntax.css><link rel=stylesheet href=https://edermi.github.io/css/codeblock.css><link rel=stylesheet href=https://edermi.github.io/css/photoswipe.min.css>
+<link rel=stylesheet href=https://edermi.github.io/css/photoswipe.default-skin.min.css>
+</head>
+<body>
+<nav class="navbar navbar-default navbar-fixed-top navbar-custom">
+<div class=container-fluid>
+<div class=navbar-header>
+<button type=button class=navbar-toggle data-toggle=collapse data-target=#main-navbar>
+<span class=sr-only>Toggle navigation</span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+<span class=icon-bar></span>
+</button>
+<a class=navbar-brand href=https://edermi.github.io/>edermi's Blog</a>
+</div>
+<div class="collapse navbar-collapse" id=main-navbar>
+<ul class="nav navbar-nav navbar-right">
+<li>
+<a title=About href=/about/>About</a>
+</li>
+<li>
+<a title=Turingcomplete href=/turingcomplete/>Turingcomplete</a>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+<div class=pswp tabindex=-1 role=dialog aria-hidden=true>
+<div class=pswp__bg></div>
+<div class=pswp__scroll-wrap>
+<div class=pswp__container>
+<div class=pswp__item></div>
+<div class=pswp__item></div>
+<div class=pswp__item></div>
+</div>
+<div class="pswp__ui pswp__ui--hidden">
+<div class=pswp__top-bar>
+<div class=pswp__counter></div>
+<button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<button class="pswp__button pswp__button--share" title=Share></button>
+<button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
+<div class=pswp__preloader>
+<div class=pswp__preloader__icn>
+<div class=pswp__preloader__cut>
+<div class=pswp__preloader__donut></div>
+</div>
+</div>
+</div>
+</div>
+<div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
+<div class=pswp__share-tooltip></div>
+</div>
+<button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+</button>
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
+</button>
+<div class=pswp__caption>
+<div class=pswp__caption__center></div>
+</div>
+</div>
+</div>
+</div>
+<header class=header-section>
+<div class="intro-header no-img">
+<div class=container>
+<div class=row>
+<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+<div class=post-heading>
+<h1>Vulnerabilities on vmwareidentity.de (XSS) and in VMware UEM (exportable authentication certificate)</h1>
+<span class=post-meta>
+<i class="fas fa-calendar"></i>&nbsp;Posted on 2021-08-29
+&nbsp;|&nbsp;<i class="fas fa-clock"></i>&nbsp;5&nbsp;minutes
+&nbsp;|&nbsp;<i class="fas fa-book"></i>&nbsp;1011&nbsp;words
+</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</header>
+<div class=container role=main>
+<div class=row>
+<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+<article role=main class=blog-post>
+<p>This post is a short notice about vulnerabilities in VMware products I found earlier this year.
+During a penetration test of a freshly built environment, I took a closer look at VMware Unified Access Gateway (UAG) in combination with devices enrolled and managed via VMware Unified Endpoint Management (UEM).
+I found a reflected XSS vulnerability on VMware&rsquo;s authenticator <code>vmwareidentity.de</code> that can be abused by sending links to unauthenticated victims.
+Also, I found it possible to export a user&rsquo;s authentication certificate, which allows to access zero trust protected resources without access to the user&rsquo;s device or account on a trusted system.
+There has been no advisory or notification for affected customers I am aware of.
+The disclosure deadline was already a few weeks ago and VMware did not respond to multiple attempts of contacting them as well as offering an extension of the responsible disclosure timeframe, therefore I am releasing the vulnerability details to the public.</p>
+<p><strong>Disclaimer</strong>: Due to time and access constraints, I did not research the vulnerabilities in detail.
+I may also use VMware product names incorrectly, but since I&rsquo;m spending my free time on writing up vulnerabilities in products of a multi billion dollar company without compensation, I did not spend additional time on researching the correct use of their brands and marketing terminology.</p>
+<h2 id=vulnerabilities>Vulnerabilities</h2>
+<h3 id=context>Context</h3>
+<p>VMware Unified Access Gateway (UAG) is a reverse proxy that can be used to protect company resources in a zero trust setup.
+Internal resources like an intranet or applications are published to the internet via UAG.
+Once unauthenticated users try to access such a resource from the internet, UAG will forward them together with a SAML request to <code>&lt;customer>.vmwareidentity.de</code>, where an authentication workflow is triggered.</p>
+<p>Any legit user, i.e. owning a company-enrolled device and having the permissions to access the resource, has an authentication certificate installed by the VMware device management (VMware Unified Endpoint Management, UEM / Workspace One).
+During the authentication workflow, <code>&lt;customer>.vmwareidentity.de</code> will request the client to perform a TLS client authentication using this certificate.
+The certificate is the only source providing information about the client, for example user name.
+If this authentication succeeds, the workflow moves on and may eventually return a session ID that will allow the client to pass through UAG and access the protected resource.
+In some cases, UAG may be configured to perform a Kerberos delegation of the user against the target application, such that the user has direct access to the application without further authentication steps.</p>
+<h3 id=exporting-the-devices-authentication-certificate>Exporting the device&rsquo;s authentication certificate</h3>
+<p>The certificate is marked non-exportable, therefore it is not possible to export it using <code>certmgr.msc</code>.
+Additonally, enrollment was configured to enforce TPM-backed storage of the certificate in the VMware cloud console, so the private key of the installed certificate is expected to be protected by the TPM (I assume similar to virtual smart cards), so exporting the certificate must not be possible.
+Surprisingly, the certificate can be exported in a non-elevated(!) user context using mimikatz:</p>
+<pre><code>crypto::capi
+crypto::certificates /export
+</code></pre><p>The exported certificate was imported into Burp to verify that it indeed allows to access resources behind UAG, impersonating the user the certificate is issued to.
+The certificate has a validity of 10 years and there seem to be no checks if the system accessing the resource is indeed the user&rsquo;s system.
+Nevertheless, there seems to be a background check if the linked system is still enrolled and compliant when accessing a resource.</p>
+<p>An attacker who gained temporary access to an enrolled and compliant system in the context of a user may abuse this issue to potentially gain persistent access to resources protected by UAG, even without still having access to the user or the device as long as the device is still enrolled and compliant (I did not research this in detail, the authentication decision will most likely take other parameters into account, too).</p>
+<h3 id=reflected-xss-on-vmwareidentityde>Reflected XSS on vmwareidentity.de</h3>
+<p>When accessing a resource protected by UAG, the user must first authenticate against the authenticator at <code>&lt;customer>.vmwareidentity.de</code>.
+Upon the first request, UAG returns a redirect containing a SAML message that needs to be passed to the authenticator.
+An attacker that tampers the SAML message to contain invalid XML can craft a valid reflective Cross-Site-Scripting payload that is executed in the context of <code>&lt;customer>.vmwareidentity.de</code>.
+The payload is a base64-encoded GET parameter, therefore users can be attacked by sending them benign-looking links.
+Clicking such a link is enough to trigger the vulnerability.</p>
+<p><img src=images/successful_XSS.png alt="Successful XSS on vmwareidentity.de"></p>
+<p>Because the SAML signature may be omitted, there is plenty of space for even more complex JavaScript payloads.
+I did not further evaluate the potential impact, but I assume that a clever attacker manages to gain something useful from reflected XSS on a trustworthy site that also happens to be an authentication endpoint.</p>
+<h2 id=disclosure>Disclosure</h2>
+<ul>
+<li>2021-05-07: Initial contact with VMware.</li>
+<li>2021-05-07: VMware states that security testing of *.vmwareidentity.de is not permitted according to their cloud service offering TOS. Further information of used software versions is provided.</li>
+<li>2021-05-13: VMware asks further details regarding Mimikatz version and if I am able to provide a recording of the specific steps. Information is provided. I also offer them to have a call and do a live demo.</li>
+<li>2021-05-17: VMware asks for further steps on how to reproduce the certificate retrieval. I record a screencast, proofing exportability and access to protected resources using the authentication certificate.</li>
+<li>2021-05-25: Asking VMware for feedback and confirmation of the vulnerabilities.</li>
+<li>2021-05-26: VMware responds: Regarding the exportable certificates, the team is still investigating. The missing signature check is expected behaviour, &ldquo;The reason that an unsigned SAML request is not rejected is that the protocol says &lsquo;MAY&rsquo;, not &lsquo;SHALL&rsquo;&rdquo;. The XSS vulnerability has been reproduced and fixed, but VMware asks to keep this information confidential as wider impact is still evaluated.</li>
+<li>2021-05-28: I provide VMware further details about the customer.</li>
+<li>2021-06-29: Asking VMware for progress and feedback. No response.</li>
+<li>2021-08-09: Asking VMware for progress and feedback, offer to extend disclosure deadline. No response.</li>
+<li>2021-08-29: Disclosure.</li>
+</ul>
+<p>I am not aware of a security advisory sent out to affected customers.
+No CVE has been assigned and no bounty has been paid.</p>
+<div class=blog-tags>
+<a href=https://edermi.github.io//tags/red-team/>red team</a>&nbsp;
+<a href=https://edermi.github.io//tags/phishing/>phishing</a>&nbsp;
+<a href=https://edermi.github.io//tags/mimikatz/>mimikatz</a>&nbsp;
+<a href=https://edermi.github.io//tags/disclosure/>disclosure</a>&nbsp;
+<a href=https://edermi.github.io//tags/xss/>XSS</a>&nbsp;
+<a href=https://edermi.github.io//tags/vmware/>vmware</a>&nbsp;
+</div>
+</article>
+<ul class="pager blog-pager">
+<li class=previous>
+<a href=https://edermi.github.io/post/2021/modding_gophish/ data-toggle=tooltip data-placement=top title="Modding Gophish">&larr; Previous Post</a>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<footer>
+<div class=container>
+<div class=row>
+<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
+<ul class="list-inline text-center footer-links">
+<li>
+<a href=mailto:spam-blog@michael-eder.net title="Email me">
+<span class="fa-stack fa-lg">
+<i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-envelope fa-stack-1x fa-inverse"></i>
+</span>
+</a>
+</li>
+<li>
+<a href=https://github.com/edermi title=GitHub>
+<span class="fa-stack fa-lg">
+<i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-github fa-stack-1x fa-inverse"></i>
+</span>
+</a>
+</li>
+<li>
+<a href=https://twitter.com/michael_eder_ title=Twitter>
+<span class="fa-stack fa-lg">
+<i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
+</span>
+</a>
+</li>
+<li>
+<a href=https://linkedin.com/in/michael-eder-34b923120 title=LinkedIn>
+<span class="fa-stack fa-lg">
+<i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
+</span>
+</a>
+</li>
+<li>
+<a href=https://www.xing.com/profile/Michael_Eder65 title=Xing>
+<span class="fa-stack fa-lg">
+<i class="fas fa-circle fa-stack-2x"></i>
+<i class="fab fa-xing fa-stack-1x fa-inverse"></i>
+</span>
+</a>
+</li>
+<li>
+<a href title=RSS>
+<span class="fa-stack fa-lg">
+<i class="fas fa-circle fa-stack-2x"></i>
+<i class="fas fa-rss fa-stack-1x fa-inverse"></i>
+</span>
+</a>
+</li>
+</ul>
+<p class="credits copyright text-muted">
+Michael Eder
+&nbsp;&bull;&nbsp;&copy;
+2021
+&nbsp;&bull;&nbsp;
+<a href=https://edermi.github.io/>edermi's Blog</a>
+</p>
+<p class="credits theme-by text-muted">
+<a href=https://gohugo.io>Hugo v0.87.0</a> powered &nbsp;&bull;&nbsp; Theme <a href=https://github.com/halogenica/beautifulhugo>Beautiful Hugo</a> adapted from <a href=https://deanattali.com/beautiful-jekyll/>Beautiful Jekyll</a>
+&nbsp;&bull;&nbsp;[<a href=https://github.com/edermi/edermi.github.io/tree/9468154e0fbfdbc81cac05b4d602e151d56e9726>9468154e</a>]
+</p>
+</div>
+</div>
+</div>
+</footer><script src=https://edermi.github.io/js/katex.min.js></script>
+<script src=https://edermi.github.io/js/auto-render.min.js></script>
+<script src=https://edermi.github.io/js/jquery.min.js></script>
+<script src=https://edermi.github.io/js/bootstrap.min.js></script>
+<script src=https://edermi.github.io/js/main.js></script><script>renderMathInElement(document.body)</script><script src=https://edermi.github.io/js/photoswipe.min.js></script>
+<script src=https://edermi.github.io/js/photoswipe-ui-default.min.js></script><script src=https://edermi.github.io/js/load-photoswipe.js></script>
+</body>
+</html>
