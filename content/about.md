@@ -14,6 +14,6 @@ My main interest is IT security, but I also write code from time to time - mainl
 Apart from spending time with computers, I like bouldering or experiencing adventures with my friends and colleagues.
 At some point, I think it was a CCC congress a few years back, I discovered my fancy for doors and locks, so it is quite common to see me pulling out a bunch of weird tools when searching for my power plug at the bottom of my backpack.
 
-As I said, I try to go to several conferences, mostly Europe based, each year. If you want to say "Hi" and have a beer or Mate with me, just get in touch! I'm usually there for meeting and making friends instead of talks I can also watch on Youtube 2 weeks later :-)
+As I said, I try to go to several conferences, mostly Europe based, each year. If you want to say "Hi" and have a beer or [Club Mate](https://www.club-mate.de/en/) with me, just get in touch! I'm usually there for meeting and making friends instead of talks I can also watch on Youtube 2 weeks later :-)
 
 There's some German stuff on the site (especially older posts), but I'll try to write in English in the future.
