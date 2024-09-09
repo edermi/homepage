@@ -1,263 +1,66 @@
-<!doctype html><html lang=en itemscope itemtype=http://schema.org/WebPage>
-<head>
-<meta charset=utf-8>
-<meta http-equiv=x-ua-compatible content="IE=edge">
-<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
-<title>Abusing accounts that already changed their password - edermi's Blog</title>
-<meta name=description content="TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).
-Intro On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin.">
-<meta name=author content="Michael Eder"><script type=application/ld+json>{"@context":"http://schema.org","@type":"WebSite","name":"edermi\u0027s Blog","url":"https:\/\/edermi.github.io\/"}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Organization","name":"","url":"https:\/\/edermi.github.io\/"}</script>
-<script type=application/ld+json>{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https:\/\/edermi.github.io\/","name":"home"}},{"@type":"ListItem","position":3,"item":{"@id":"https:\/\/edermi.github.io\/post\/2020\/abusing_accounts_that_changed_passwords\/","name":"Abusing accounts that already changed their password"}}]}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Article","author":{"name":"Michael Eder"},"headline":"Abusing accounts that already changed their password","description":"TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).\nIntro On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin.","inLanguage":"en","wordCount":1137,"datePublished":"2020-02-23T00:00:00","dateModified":"2020-02-23T00:00:00","image":"https:\/\/edermi.github.io\/","keywords":["kerberos, red team, windows"],"mainEntityOfPage":"https:\/\/edermi.github.io\/post\/2020\/abusing_accounts_that_changed_passwords\/","publisher":{"@type":"Organization","name":"https:\/\/edermi.github.io\/","logo":{"@type":"ImageObject","url":"https:\/\/edermi.github.io\/","height":60,"width":60}}}</script>
-<meta property="og:title" content="Abusing accounts that already changed their password">
-<meta property="og:description" content="TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).
-Intro On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin.">
-<meta property="og:url" content="https://edermi.github.io/post/2020/abusing_accounts_that_changed_passwords/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="edermi's Blog">
-<meta name=twitter:title content="Abusing accounts that already changed their password">
-<meta name=twitter:description content="TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got …">
-<meta name=twitter:card content="summary">
-<meta name=twitter:site content="@michael_eder_">
-<meta name=twitter:creator content="@michael_eder_">
-<meta name=generator content="Hugo 0.88.1">
-<link rel=alternate href=https://edermi.github.io/index.xml type=application/rss+xml title="edermi's Blog"><link rel=stylesheet href=https://edermi.github.io/css/katex.min.css>
-<link rel=stylesheet href=https://edermi.github.io/fontawesome/css/all.css>
-<link rel=stylesheet href=https://edermi.github.io/css/bootstrap.min.css><link rel=stylesheet href=https://edermi.github.io/css/main.css><link rel=stylesheet href=https://edermi.github.io/css/fonts.css><link rel=stylesheet href=https://edermi.github.io/css/syntax.css><link rel=stylesheet href=https://edermi.github.io/css/codeblock.css><link rel=stylesheet href=https://edermi.github.io/css/photoswipe.min.css>
-<link rel=stylesheet href=https://edermi.github.io/css/photoswipe.default-skin.min.css>
-</head>
-<body>
-<nav class="navbar navbar-default navbar-fixed-top navbar-custom">
-<div class=container-fluid>
-<div class=navbar-header>
-<button type=button class=navbar-toggle data-toggle=collapse data-target=#main-navbar>
+<!doctype html><html lang=en itemscope itemtype=http://schema.org/WebPage><head><meta charset=utf-8><meta http-equiv=X-UA-Compatible content="IE=edge"><meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1"><title>Abusing accounts that already changed their password - </title><meta name=description content="TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).
+Intro
+On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin.
+Getting started was tough, but after some time I got my hands on a few admin accounts and had a way to take control of the Domain Admins - but the way involved resetting the password of a service account.
+Unless I do not have a very good reason to perform the password change or the explicit &ldquo;Do it!&rdquo; from the customer, I prefer finding another way.
+Lurking for a few days on the machines I gained access so far, I discovered two accounts that logged on recently.
+They both provided a simpler way to become Domain Admin because they were allowed to write the Domain Admin group directly - Jackpot!"><script type=application/ld+json>{"@context":"http://schema.org","@type":"WebSite","name":"edermi\u0027s Blog","url":"https:\/\/edermi.github.io\/"}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Organization","name":"","url":"https:\/\/edermi.github.io\/"}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"item":{"@id":"https:\/\/edermi.github.io\/","name":"home"}},{"@type":"ListItem","position":3,"item":{"@id":"https:\/\/edermi.github.io\/post\/2020\/abusing_accounts_that_changed_passwords\/","name":"Abusing accounts that already changed their password"}}]}</script><script type=application/ld+json>{"@context":"http://schema.org","@type":"Article","author":{"name":""},"headline":"Abusing accounts that already changed their password","description":"TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).\nIntro On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin. Getting started was tough, but after some time I got my hands on a few admin accounts and had a way to take control of the Domain Admins - but the way involved resetting the password of a service account. Unless I do not have a very good reason to perform the password change or the explicit \u0026ldquo;Do it!\u0026rdquo; from the customer, I prefer finding another way. Lurking for a few days on the machines I gained access so far, I discovered two accounts that logged on recently. They both provided a simpler way to become Domain Admin because they were allowed to write the Domain Admin group directly - Jackpot!\n","inLanguage":"en","wordCount":1137,"datePublished":"2020-02-23T00:00:00\u002b00:00","dateModified":"2024-09-09T17:51:10\u002b02:00","image":"https:\/\/edermi.github.io\/","keywords":["kerberos, red team, windows"],"mainEntityOfPage":"https:\/\/edermi.github.io\/post\/2020\/abusing_accounts_that_changed_passwords\/","publisher":{"@type":"Organization","name":"https:\/\/edermi.github.io\/","logo":{"@type":"ImageObject","url":"https:\/\/edermi.github.io\/","height":60,"width":60}}}</script><meta property="og:title" content="Abusing accounts that already changed their password"><meta property="og:description" content="TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).
+Intro
+On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin.
+Getting started was tough, but after some time I got my hands on a few admin accounts and had a way to take control of the Domain Admins - but the way involved resetting the password of a service account.
+Unless I do not have a very good reason to perform the password change or the explicit &ldquo;Do it!&rdquo; from the customer, I prefer finding another way.
+Lurking for a few days on the machines I gained access so far, I discovered two accounts that logged on recently.
+They both provided a simpler way to become Domain Admin because they were allowed to write the Domain Admin group directly - Jackpot!"><meta property="og:url" content="https://edermi.github.io/post/2020/abusing_accounts_that_changed_passwords/"><meta property="og:type" content="website"><meta property="og:site_name" content="edermi's Blog"><meta name=twitter:title content="Abusing accounts that already changed their password"><meta name=twitter:description content="TL;DR: In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got …"><meta name=twitter:card content="summary_large_image"><meta name=generator content="Hugo 0.134.1"><link rel=alternate href=https://edermi.github.io/index.xml type=application/rss+xml title="edermi's Blog"><link rel=stylesheet href=https://edermi.github.io/css/katex.min.css><link rel=stylesheet href=https://edermi.github.io/fontawesome/css/all.css><link rel=stylesheet href=https://edermi.github.io/css/bootstrap.min.css><link rel=stylesheet href=https://edermi.github.io/css/main.css><link rel=stylesheet href=https://edermi.github.io/css/fonts.css><link rel=stylesheet href=https://edermi.github.io/css/syntax.css><link rel=stylesheet href=https://edermi.github.io/css/codeblock.css><link rel=stylesheet href=https://edermi.github.io/css/photoswipe.min.css><link rel=stylesheet href=https://edermi.github.io/css/photoswipe.default-skin.min.css></head><body><nav class="navbar navbar-default navbar-fixed-top navbar-custom"><div class=container-fluid><div class=navbar-header><button type=button class=navbar-toggle data-toggle=collapse data-target=#main-navbar>
 <span class=sr-only>Toggle navigation</span>
 <span class=icon-bar></span>
 <span class=icon-bar></span>
 <span class=icon-bar></span>
 </button>
-<a class=navbar-brand href=https://edermi.github.io/>edermi's Blog</a>
-</div>
-<div class="collapse navbar-collapse" id=main-navbar>
-<ul class="nav navbar-nav navbar-right">
-<li>
-<a title=About href=/about/>About</a>
-</li>
-<li>
-<a title=Turingcomplete href=/turingcomplete/>Turingcomplete</a>
-</li>
-</ul>
-</div>
-</div>
-</nav>
-<div class=pswp tabindex=-1 role=dialog aria-hidden=true>
-<div class=pswp__bg></div>
-<div class=pswp__scroll-wrap>
-<div class=pswp__container>
-<div class=pswp__item></div>
-<div class=pswp__item></div>
-<div class=pswp__item></div>
-</div>
-<div class="pswp__ui pswp__ui--hidden">
-<div class=pswp__top-bar>
-<div class=pswp__counter></div>
-<button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+<a class=navbar-brand href=https://edermi.github.io/>edermi's Blog</a></div><div class="collapse navbar-collapse" id=main-navbar><ul class="nav navbar-nav navbar-right"><li><a title=About href=/about/>About</a></li><li><a title=Turingcomplete href=/turingcomplete/>Turingcomplete</a></li></ul></div></div></nav><div class=pswp tabindex=-1 role=dialog aria-hidden=true><div class=pswp__bg></div><div class=pswp__scroll-wrap><div class=pswp__container><div class=pswp__item></div><div class=pswp__item></div><div class=pswp__item></div></div><div class="pswp__ui pswp__ui--hidden"><div class=pswp__top-bar><div class=pswp__counter></div><button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
 <button class="pswp__button pswp__button--share" title=Share></button>
 <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
-<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button>
-<div class=pswp__preloader>
-<div class=pswp__preloader__icn>
-<div class=pswp__preloader__cut>
-<div class=pswp__preloader__donut></div>
-</div>
-</div>
-</div>
-</div>
-<div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap">
-<div class=pswp__share-tooltip></div>
-</div>
-<button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
+<button class="pswp__button pswp__button--zoom" title="Zoom in/out"></button><div class=pswp__preloader><div class=pswp__preloader__icn><div class=pswp__preloader__cut><div class=pswp__preloader__donut></div></div></div></div></div><div class="pswp__share-modal pswp__share-modal--hidden pswp__single-tap"><div class=pswp__share-tooltip></div></div><button class="pswp__button pswp__button--arrow--left" title="Previous (arrow left)">
 </button>
-<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)">
-</button>
-<div class=pswp__caption>
-<div class=pswp__caption__center></div>
-</div>
-</div>
-</div>
-</div>
-<header class=header-section>
-<div class="intro-header no-img">
-<div class=container>
-<div class=row>
-<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-<div class=post-heading>
-<h1>Abusing accounts that already changed their password</h1>
-<span class=post-meta>
-<i class="fas fa-calendar"></i>&nbsp;Posted on 2020-02-23
-&nbsp;(Last modified on 2021-10-22)
+<button class="pswp__button pswp__button--arrow--right" title="Next (arrow right)"></button><div class=pswp__caption><div class=pswp__caption__center></div></div></div></div></div><header class=header-section><div class="intro-header no-img"><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><div class=post-heading><h1>Abusing accounts that already changed their password</h1><span class=post-meta><i class="fas fa-calendar"></i>&nbsp;Posted on 2020-02-23
+&nbsp;(Last modified on 2024-09-09)
 &nbsp;|&nbsp;<i class="fas fa-clock"></i>&nbsp;6&nbsp;minutes
-&nbsp;|&nbsp;<i class="fas fa-book"></i>&nbsp;1137&nbsp;words
-</span>
-</div>
-</div>
-</div>
-</div>
-</div>
-</header>
-<div class=container role=main>
-<div class=row>
-<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-<article role=main class=blog-post>
-<p><em><strong>TL;DR</strong></em>: <em>In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).</em></p>
-<h1 id=intro>Intro</h1>
-<p>On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin.
+&nbsp;|&nbsp;<i class="fas fa-book"></i>&nbsp;1137&nbsp;words</span></div></div></div></div></div></header><div class=container role=main><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><article role=main class=blog-post><p><em><strong>TL;DR</strong></em>: <em>In some circumstances, you may find usable Kerberos TGTs on a system you compromised - these allow you to impersonate a user that already changed its password (e.g. because the user got suspicious or a PAM solution is in place).</em></p><h1 id=intro>Intro</h1><p>On a recent project, I was tasked with the usual goal: Start from the ground and find a way to take over the company - in the end, if possible, somehow become Domain Admin.
 Getting started was tough, but after some time I got my hands on a few admin accounts and had a way to take control of the Domain Admins - but the way involved resetting the password of a service account.
 Unless I do not have a very good reason to perform the password change or the explicit &ldquo;Do it!&rdquo; from the customer, I prefer finding another way.
 Lurking for a few days on the machines I gained access so far, I discovered two accounts that logged on recently.
-They both provided a simpler way to become Domain Admin because they were allowed to write the Domain Admin group directly - Jackpot!</p>
-<p>So, I dumped the credentials, opened a local <code>mmc</code> using one of the accounts and was about calling it a day, when suddenly Windows refused the credentials of the account because they were wrong.
-I double checked my data and also tried the other account, but unfortunately without success.</p>
-<p><img src=/img/panic.gif alt=WTF.gif></p>
-<p>Using the Sysinternals AD Explorer I checked the <code>pwdLastSet</code> attribute of both accounts.
-The passwords of both accounts had been changed a few moments after dumping them, and because I had some operational struggles on the server I was not fast enough to use the credentials when they were still valid.</p>
-<p>At that point, I remembered that the customer started a CyberArk roll out recently and according to their Active Directory OU, these accounts seemed to be managed by CyberArk already.
-Now, I was quite resigned - I managed to dump highly privileged accounts but the credentials changed faster than I could abuse them.</p>
-<p><img src=/img/fts.gif alt=damn.gif></p>
-<h1 id=digging-deeper>Digging deeper</h1>
-<p>CyberArk is a so called privileged access management (PAM) solution and one of its central ideas is to have the credentials managed by the appliance.
+They both provided a simpler way to become Domain Admin because they were allowed to write the Domain Admin group directly - Jackpot!</p><p>So, I dumped the credentials, opened a local <code>mmc</code> using one of the accounts and was about calling it a day, when suddenly Windows refused the credentials of the account because they were wrong.
+I double checked my data and also tried the other account, but unfortunately without success.</p><p><img src=/img/panic.gif alt=WTF.gif></p><p>Using the Sysinternals AD Explorer I checked the <code>pwdLastSet</code> attribute of both accounts.
+The passwords of both accounts had been changed a few moments after dumping them, and because I had some operational struggles on the server I was not fast enough to use the credentials when they were still valid.</p><p>At that point, I remembered that the customer started a CyberArk roll out recently and according to their Active Directory OU, these accounts seemed to be managed by CyberArk already.
+Now, I was quite resigned - I managed to dump highly privileged accounts but the credentials changed faster than I could abuse them.</p><p><img src=/img/fts.gif alt=damn.gif></p><h1 id=digging-deeper>Digging deeper</h1><p>CyberArk is a so called privileged access management (PAM) solution and one of its central ideas is to have the credentials managed by the appliance.
 In the best case, administrators will never see any passwords again, instead CyberArk takes care about login, logout and password rotation using one of the accounts in the account pool managed by the appliance.
-For the accounts I dumped, this means that someone was working on the server via CyberArk and after logging out, CyberArk automatically changed the password of the accounts to a new random value.</p>
-<p>After silently giving them props for having their accounts protected by such a solution, I went on with the test and focused on other topics, but something in the back of my head kept working on it.
+For the accounts I dumped, this means that someone was working on the server via CyberArk and after logging out, CyberArk automatically changed the password of the accounts to a new random value.</p><p>After silently giving them props for having their accounts protected by such a solution, I went on with the test and focused on other topics, but something in the back of my head kept working on it.
 I spent a lot of time with Kerberos in the last few months, and one idea that came up was the following:
-Why can&rsquo;t I just use the obtained NTLM hashes to perform a overpass-the-hash (See <a href=https://twitter.com/gentilkiwi>@gentilkiwi</a>&rsquo;s <a href="https://www.blackhat.com/docs/us-14/materials/us-14-Duckwall-Abusing-Microsoft-Kerberos-Sorry-You-Guys-Don't-Get-It-wp.pdf">BlackHat 2014 Paper</a>)?</p>
-<h1 id=wrong-direction>Wrong direction&mldr;</h1>
-<p>As I&rsquo;m in possession of the NTLM hash, I should be actually able to forge an arbitrary Kerberos ticket offline, but neither Mimikatz nor Rubeus contained the capabilities to do so.
-The closest was Mimikatz&rsquo;s <code>kerberos::golden</code> or Rubeus' <code>asktgt</code>, but the first one works only if the accounts are service accounts and the second one will communicate with a domain controller in order to retrieve the ticket - but this will not work, since the credentials have already changed.
+Why can&rsquo;t I just use the obtained NTLM hashes to perform a overpass-the-hash (See <a href=https://twitter.com/gentilkiwi>@gentilkiwi</a>&rsquo;s <a href="https://www.blackhat.com/docs/us-14/materials/us-14-Duckwall-Abusing-Microsoft-Kerberos-Sorry-You-Guys-Don't-Get-It-wp.pdf">BlackHat 2014 Paper</a>)?</p><h1 id=wrong-direction>Wrong direction&mldr;</h1><p>As I&rsquo;m in possession of the NTLM hash, I should be actually able to forge an arbitrary Kerberos ticket offline, but neither Mimikatz nor Rubeus contained the capabilities to do so.
+The closest was Mimikatz&rsquo;s <code>kerberos::golden</code> or Rubeus&rsquo; <code>asktgt</code>, but the first one works only if the accounts are service accounts and the second one will communicate with a domain controller in order to retrieve the ticket - but this will not work, since the credentials have already changed.
 I thought a bit longer about the idea and realized it is total nonsense.
 The user&rsquo;s Ticket Granting Ticket (TGT), which is used to request other Kerberos tickets, is encrypted using the krbtgt key, therefore there is no way to fake the ticket without the krbtgt hash.
-If you obtain the krbtgt credentials, you don&rsquo;t have to become Domain Admins anymore because you can already impersonate any user via <code>kerberos::golden</code>.</p>
-<p><img src=/img/not_working_out.gif alt=deadend.gif></p>
-<h1 id=right-direction>Right direction!</h1>
-<p>Nevertheless, I realized that there is a good chance that a valid TGT for each of the accounts is still in memory.
-I dumped the credentials two hours ago and the regular life time of a TGT is ten hours, therefore I jumped again on the server and used Rubeus to extract all Kerberos tickets.</p>
-<p>There it was: The TGT of the account I needed to become Domain Admin!
+If you obtain the krbtgt credentials, you don&rsquo;t have to become Domain Admins anymore because you can already impersonate any user via <code>kerberos::golden</code>.</p><p><img src=/img/not_working_out.gif alt=deadend.gif></p><h1 id=right-direction>Right direction!</h1><p>Nevertheless, I realized that there is a good chance that a valid TGT for each of the accounts is still in memory.
+I dumped the credentials two hours ago and the regular life time of a TGT is ten hours, therefore I jumped again on the server and used Rubeus to extract all Kerberos tickets.</p><p>There it was: The TGT of the account I needed to become Domain Admin!
 After some fiddling with text editors, max line length in Powershell and base64 (why doesn&rsquo;t Rubeus just extract the Kirbi files but line wrapped Base64?!), I was able to inject the TGT into the memory of my virtual machine.
 I tried to renew the ticket with Rubeus, this worked fine and I was confident to go.
-<img src=/img/rubeus_renew_tgt.png alt=Rubeus_renew_tgt.png></p>
-<p><img src=/img/thats_my_fetish.gif alt=thats_my_fetish.gif></p>
-<p>Unfortunately, using <code>mmc</code> didn&rsquo;t work, but <code>net use a: \\randomserver_i_shouldnt_have_access_to\c$</code> mounted me a <code>C$</code> share on <code>a:</code>, so the issue is probably <code>mmc</code> not solely using Kerberos.
+<img src=/img/rubeus_renew_tgt.png alt=Rubeus_renew_tgt.png></p><p><img src=/img/thats_my_fetish.gif alt=thats_my_fetish.gif></p><p>Unfortunately, using <code>mmc</code> didn&rsquo;t work, but <code>net use a: \\randomserver_i_shouldnt_have_access_to\c$</code> mounted me a <code>C$</code> share on <code>a:</code>, so the issue is probably <code>mmc</code> not solely using Kerberos.
 Fortunately, PowerSploit has a function called <code>Add-DomainGroupMember</code>.
 This worked, I was able to add one of my test accounts to Domain Admins without further obstacles!
-<img src=/img/powersploit_become_DA.png alt=powersploit_become_DA.png></p>
-<p><img src=/img/itworks.gif alt=itworks.gif></p>
-<h1 id=conclusion>Conclusion</h1>
-<p>Apart from reaching my goal, I bypassed one of CyberArk&rsquo;s marketing promises.
+<img src=/img/powersploit_become_DA.png alt=powersploit_become_DA.png></p><p><img src=/img/itworks.gif alt=itworks.gif></p><h1 id=conclusion>Conclusion</h1><p>Apart from reaching my goal, I bypassed one of CyberArk&rsquo;s marketing promises.
 The fact that passwords change after every use gives operators and security people a good feeling regarding security of the accounts.
-Their sales pitches probably do not include hints that their password rotation may be undermined by the way Kerberos works.</p>
-<p>This was also the first time I realized, that password changes are not a measure that is effective immediately.
+Their sales pitches probably do not include hints that their password rotation may be undermined by the way Kerberos works.</p><p>This was also the first time I realized, that password changes are not a measure that is effective immediately.
 Probably every penetration tester knows the situation where a target changed a password the day after it was dumped (because the victim got suspicious, had to change passwords, &mldr;).
 <strong>There is a high chance these credentials can still be used, at least for up to a week!</strong>
 Just make sure that you also extract the Kerberos TGTs present on the system.
-I think this is something many penetration testers are not aware of, albeit this is just how Kerberos works.</p>
-<h1 id=fixing-the-issue>Fixing the issue</h1>
-<p>To be honest, I have no clue how to fix this.
+I think this is something many penetration testers are not aware of, albeit this is just how Kerberos works.</p><h1 id=fixing-the-issue>Fixing the issue</h1><p>To be honest, I have no clue how to fix this.
 There is no vulnerability involved, the &ldquo;attack&rdquo; just abuses how Kerberos works.
 Maybe immediate rotation is not the (sole) solution to the credential theft issue, instead additional measures like locking the account if it is not used may help to mitigate this problem.
-I don&rsquo;t know if Windows writes log events that indicate tickets with expired credentials or similar, but maybe it is possible to detect this anomaly via log analysis, too.</p>
-<h1 id=kudos>Kudos</h1>
-<p>This attack (or at least me performing it) would not have been possible without the great work of Benjamin Delpy (<a href=https://twitter.com/gentilkiwi>@gentilkiwi</a>) and Will Schroeder (<a href=https://twitter.com/harmj0y>@harmj0y</a>) as well as numerous other security researchers and contributors to the Rubeus, Mimikatz and Powersploit projects.
+I don&rsquo;t know if Windows writes log events that indicate tickets with expired credentials or similar, but maybe it is possible to detect this anomaly via log analysis, too.</p><h1 id=kudos>Kudos</h1><p>This attack (or at least me performing it) would not have been possible without the great work of Benjamin Delpy (<a href=https://twitter.com/gentilkiwi>@gentilkiwi</a>) and Will Schroeder (<a href=https://twitter.com/harmj0y>@harmj0y</a>) as well as numerous other security researchers and contributors to the Rubeus, Mimikatz and Powersploit projects.
 They do not only openly share their tools, but also the knowledge behind.
-Thank you!</p>
-<div class=blog-tags>
-<a href=https://edermi.github.io//tags/kerberos/>kerberos</a>&nbsp;
-<a href=https://edermi.github.io//tags/red-team/>red team</a>&nbsp;
-<a href=https://edermi.github.io//tags/windows/>windows</a>&nbsp;
-</div>
-</article>
-<ul class="pager blog-pager">
-<li class=previous>
-<a href=https://edermi.github.io/post/2018/native_rdp_pass_the_hash/ data-toggle=tooltip data-placement=top title="Passing the hash with native RDP client (mstsc.exe)">&larr; Previous Post</a>
-</li>
-<li class=next>
-<a href=https://edermi.github.io/post/2021/modding_gophish/ data-toggle=tooltip data-placement=top title="Modding Gophish">Next Post &rarr;</a>
-</li>
-</ul>
-</div>
-</div>
-</div>
-<footer>
-<div class=container>
-<div class=row>
-<div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1">
-<ul class="list-inline text-center footer-links">
-<li>
-<a href=mailto:spam-blog@michael-eder.net title="Email me">
-<span class="fa-stack fa-lg">
-<i class="fas fa-circle fa-stack-2x"></i>
-<i class="fas fa-envelope fa-stack-1x fa-inverse"></i>
-</span>
-</a>
-</li>
-<li>
-<a href=https://github.com/edermi title=GitHub>
-<span class="fa-stack fa-lg">
-<i class="fas fa-circle fa-stack-2x"></i>
-<i class="fab fa-github fa-stack-1x fa-inverse"></i>
-</span>
-</a>
-</li>
-<li>
-<a href=https://twitter.com/michael_eder_ title=Twitter>
-<span class="fa-stack fa-lg">
-<i class="fas fa-circle fa-stack-2x"></i>
-<i class="fab fa-twitter fa-stack-1x fa-inverse"></i>
-</span>
-</a>
-</li>
-<li>
-<a href=https://linkedin.com/in/michael-eder-34b923120 title=LinkedIn>
-<span class="fa-stack fa-lg">
-<i class="fas fa-circle fa-stack-2x"></i>
-<i class="fab fa-linkedin fa-stack-1x fa-inverse"></i>
-</span>
-</a>
-</li>
-<li>
-<a href=https://www.xing.com/profile/Michael_Eder65 title=Xing>
-<span class="fa-stack fa-lg">
-<i class="fas fa-circle fa-stack-2x"></i>
-<i class="fab fa-xing fa-stack-1x fa-inverse"></i>
-</span>
-</a>
-</li>
-<li>
-<a href title=RSS>
-<span class="fa-stack fa-lg">
-<i class="fas fa-circle fa-stack-2x"></i>
-<i class="fas fa-rss fa-stack-1x fa-inverse"></i>
-</span>
-</a>
-</li>
-</ul>
-<p class="credits copyright text-muted">
-Michael Eder
-&nbsp;&bull;&nbsp;&copy;
-2021
+Thank you!</p><div class=blog-tags><a href=https://edermi.github.io/tags/kerberos/>kerberos</a>&nbsp;
+<a href=https://edermi.github.io/tags/red-team/>red team</a>&nbsp;
+<a href=https://edermi.github.io/tags/windows/>windows</a>&nbsp;</div></article><ul class="pager blog-pager"><li class=previous><a href=https://edermi.github.io/post/2018/native_rdp_pass_the_hash/ data-toggle=tooltip data-placement=top title="Passing the hash with native RDP client (mstsc.exe)">&larr; Previous Post</a></li><li class=next><a href=https://edermi.github.io/post/2021/modding_gophish/ data-toggle=tooltip data-placement=top title="Modding Gophish">Next Post &rarr;</a></li></ul></div></div></div><footer><div class=container><div class=row><div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1"><ul class="list-inline text-center footer-links"></ul><p class="credits copyright text-muted">&nbsp;&bull;&nbsp;&copy;
+2024
 &nbsp;&bull;&nbsp;
-<a href=https://edermi.github.io/>edermi's Blog</a>
-</p>
-<p class="credits theme-by text-muted">
-<a href=https://gohugo.io>Hugo v0.88.1</a> powered &nbsp;&bull;&nbsp; Theme <a href=https://github.com/halogenica/beautifulhugo>Beautiful Hugo</a> adapted from <a href=https://deanattali.com/beautiful-jekyll/>Beautiful Jekyll</a>
-&nbsp;&bull;&nbsp;[<a href=https://github.com/edermi/edermi.github.io/tree/0d3d57b43b1f2505e6fc5e377e48b2bcd7d900b7>0d3d57b4</a>]
-</p>
-</div>
-</div>
-</div>
-</footer><script src=https://edermi.github.io/js/katex.min.js></script>
-<script src=https://edermi.github.io/js/auto-render.min.js></script>
-<script src=https://edermi.github.io/js/jquery.min.js></script>
-<script src=https://edermi.github.io/js/bootstrap.min.js></script>
-<script src=https://edermi.github.io/js/main.js></script><script>renderMathInElement(document.body)</script><script src=https://edermi.github.io/js/photoswipe.min.js></script>
-<script src=https://edermi.github.io/js/photoswipe-ui-default.min.js></script><script src=https://edermi.github.io/js/load-photoswipe.js></script>
-</body>
-</html>
+<a href=https://edermi.github.io/>edermi's Blog</a></p><p class="credits theme-by text-muted"><a href=https://gohugo.io>Hugo v0.134.1</a> powered &nbsp;&bull;&nbsp; Theme <a href=https://github.com/halogenica/beautifulhugo>Beautiful Hugo</a> adapted from <a href=https://deanattali.com/beautiful-jekyll/>Beautiful Jekyll</a>
+&nbsp;&bull;&nbsp;[<a href=https://github.com/edermi/edermi.github.io/tree/6cbbb4311c481e3bbd96b1d169d2aba5168c082c>6cbbb431</a>]</p></div></div></div></footer><script defer src=https://edermi.github.io/js/katex.min.js></script><script defer src=https://edermi.github.io/js/auto-render.min.js onload=renderMathInElement(document.body)></script><script src=https://edermi.github.io/js/jquery-3.7.0.slim.min.js></script><script src=https://edermi.github.io/js/bootstrap.min.js></script><script src=https://edermi.github.io/js/main.js></script><script src=https://edermi.github.io/js/photoswipe.min.js></script><script src=https://edermi.github.io/js/photoswipe-ui-default.min.js></script><script src=https://edermi.github.io/js/load-photoswipe.js></script></body></html>
